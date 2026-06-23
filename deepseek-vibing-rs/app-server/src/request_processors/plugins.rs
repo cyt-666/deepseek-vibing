@@ -13,7 +13,6 @@ pub(crate) struct PluginRequestProcessor {
     auth_manager: Arc<AuthManager>,
     thread_manager: Arc<ThreadManager>,
     outgoing: Arc<OutgoingMessageSender>,
-    analytics_events_client: AnalyticsEventsClient,
     config_manager: ConfigManager,
     workspace_settings_cache: Arc<workspace_settings::WorkspaceSettingsCache>,
 }
@@ -107,7 +106,7 @@ impl PluginRequestProcessor {
         auth_manager: Arc<AuthManager>,
         thread_manager: Arc<ThreadManager>,
         outgoing: Arc<OutgoingMessageSender>,
-        analytics_events_client: AnalyticsEventsClient,
+        _analytics_events_client: AnalyticsEventsClient,
         config_manager: ConfigManager,
         workspace_settings_cache: Arc<workspace_settings::WorkspaceSettingsCache>,
     ) -> Self {
@@ -115,7 +114,6 @@ impl PluginRequestProcessor {
             auth_manager,
             thread_manager,
             outgoing,
-            analytics_events_client,
             config_manager,
             workspace_settings_cache,
         }
@@ -275,7 +273,7 @@ impl PluginRequestProcessor {
             return Ok(empty_response());
         }
         let plugins_input = config.plugins_config_input();
-        let (mut data, marketplace_load_errors) = if include_local {
+        let (data, marketplace_load_errors) = if include_local {
             let config_for_marketplace_listing = plugins_input.clone();
             let plugins_manager_for_marketplace_listing = plugins_manager.clone();
             match tokio::task::spawn_blocking(move || {
@@ -377,7 +375,6 @@ impl PluginRequestProcessor {
         let (data, marketplace_load_errors) = self
             .load_local_installed_and_suggested_plugins(
                 plugins_manager.clone(),
-                &config,
                 &plugins_input,
                 roots,
                 install_suggestion_plugin_names,
@@ -393,7 +390,6 @@ impl PluginRequestProcessor {
     async fn load_local_installed_and_suggested_plugins(
         &self,
         plugins_manager: Arc<deepseek_vibing_core_plugins::PluginsManager>,
-        config: &Config,
         plugins_input: &deepseek_vibing_core_plugins::PluginsConfigInput,
         roots: Vec<AbsolutePathBuf>,
         install_suggestion_plugin_names: HashSet<String>,

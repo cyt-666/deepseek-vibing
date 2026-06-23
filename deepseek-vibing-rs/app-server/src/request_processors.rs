@@ -261,7 +261,6 @@ use deepseek_vibing_core_plugins::PluginReadRequest;
 use deepseek_vibing_core_plugins::PluginUninstallError as CorePluginUninstallError;
 use deepseek_vibing_core_plugins::loader::load_plugin_apps;
 use deepseek_vibing_core_plugins::loader::load_plugin_mcp_servers;
-use deepseek_vibing_core_plugins::loader::plugin_telemetry_metadata_from_root;
 use deepseek_vibing_core_plugins::manifest::PluginManifestInterface;
 use deepseek_vibing_core_plugins::marketplace::MarketplaceError;
 use deepseek_vibing_core_plugins::marketplace::MarketplacePluginSource;

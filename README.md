@@ -28,8 +28,8 @@ vision_api_key = ""
 [vision]
 enabled = true
 provider = "openai_compatible"
-model = "vision-model"
-base_url = "https://example.com/v1"
+model = "<your-vision-model>"
+base_url = "https://your-vision-provider.example/v1"
 
 [trajectory]
 enabled = "auto"
@@ -60,6 +60,13 @@ Run the P0 live smoke against your real local config:
 
 ```shell
 scripts/deepseek-p0-live-smoke.sh
+```
+
+Run the Vision Bridge live smoke after configuring `[auth].vision_api_key`,
+`[vision].base_url`, and `[vision].model`:
+
+```shell
+scripts/deepseek-vision-live-smoke.sh
 ```
 
 See [PROJECT_PLAN.md](./PROJECT_PLAN.md) for the staged migration plan.

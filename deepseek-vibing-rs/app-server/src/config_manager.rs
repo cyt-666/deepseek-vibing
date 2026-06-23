@@ -1,6 +1,5 @@
 use deepseek_vibing_arg0::Arg0DispatchPaths;
 use deepseek_vibing_auth::AuthManager;
-use deepseek_vibing_auth::default_client::set_default_client_residency_requirement;
 use deepseek_vibing_cloud_config::cloud_requirements_loader;
 use deepseek_vibing_config::CloudRequirementsLoader;
 use deepseek_vibing_config::ConfigLayerStack;
@@ -124,18 +123,6 @@ impl ConfigManager {
             .read()
             .map(|guard| Arc::clone(&*guard))
             .unwrap_or_else(|_| Arc::new(deepseek_vibing_config::NoopThreadConfigLoader))
-    }
-
-    pub(crate) async fn sync_default_client_residency_requirement(&self) {
-        match self.load_latest_config(/*fallback_cwd*/ None).await {
-            Ok(config) => {
-                set_default_client_residency_requirement(config.enforce_residency.value());
-            }
-            Err(err) => warn!(
-                error = %err,
-                "failed to sync default client residency requirement after auth refresh"
-            ),
-        }
     }
 
     pub(crate) async fn load_latest_config(

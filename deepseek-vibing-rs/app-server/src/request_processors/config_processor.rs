@@ -61,7 +61,6 @@ const SUPPORTED_EXPERIMENTAL_FEATURE_ENABLEMENT: &[&str] = &[
 pub(crate) struct ConfigRequestProcessor {
     outgoing: Arc<OutgoingMessageSender>,
     config_manager: ConfigManager,
-    auth_manager: Arc<AuthManager>,
     thread_manager: Arc<ThreadManager>,
     analytics_events_client: AnalyticsEventsClient,
 }
@@ -70,14 +69,13 @@ impl ConfigRequestProcessor {
     pub(crate) fn new(
         outgoing: Arc<OutgoingMessageSender>,
         config_manager: ConfigManager,
-        auth_manager: Arc<AuthManager>,
+        _auth_manager: Arc<AuthManager>,
         thread_manager: Arc<ThreadManager>,
         analytics_events_client: AnalyticsEventsClient,
     ) -> Self {
         Self {
             outgoing,
             config_manager,
-            auth_manager,
             thread_manager,
             analytics_events_client,
         }

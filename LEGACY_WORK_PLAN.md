@@ -26,6 +26,7 @@
 ### 2.2 已验证状态
 
 - `cargo check --manifest-path deepseek-vibing/deepseek-vibing-rs/Cargo.toml -p deepseek-vibing-cli` 通过。
+- git/repo hygiene 已建立初始可追踪基线：`deepseek-vibing` 独立 git repo 已创建 root commit `f2c30d9`，`.gitignore` 已忽略本地 DeepSeek Vibing home、smoke SQLite/cache 和 Rust target。
 - `deepseek-vibing-core` 的 `deepseek`、`vision`、`fim`、`trajectory`、`eval` 筛选测试通过。
 - `deepseek-vibing-cli eval` 筛选测试通过。
 - 使用真实 `~/.deepseek-vibing/config.toml` 和真实 DeepSeek API 的 P0 live smoke 已通过。
@@ -45,6 +46,8 @@
 - P1 runtime smoke 已通过：stable `exec` 完成读文件、patch、`cargo test --quiet`；optional `deepseek-beta` 完成 strict-tool 文件创建和读回。
 - P1 remote plugin backend 清理已完成：ChatGPT backend catalog、featured、remote sync、remote bundle download、remote share/save/list/checkout/delete/updateTargets 路径已从默认构建和 app-server public surface 移除。
 - P1 realtime protocol 清理已完成：app-server public JSON-RPC 的 `thread/realtime/*`、TUI realtime/audio UI、core realtime runtime 和 app-server README/schema 中的 realtime 公开说明已移除。
+- app-server 长期取舍已收口：当前保留 app-server 作为本地 TUI/SDK/desktop 协议层和 app-server-client 测试边界；不恢复 ChatGPT account、remote plugin backend、realtime 或 Codex Cloud 语义。后续只做本地协议瘦身，除非先设计出替代 IPC/SDK 边界，否则不删除整个 app-server。
+- app-server dead-code 第一轮轻量清理已完成：移除 app-server 中 account/backend 清理后遗留的未使用 import、字段、参数和 helper；`cargo check -p deepseek-vibing-app-server` 通过。
 - P1 V8 / Code-Mode 清理已完成：`code-mode`、`v8-poc`、`v8`、`deno_core_icudata` 已从 workspace 和 `deepseek-vibing-cli` 构建链移除，DeepSeek Vibing 只保留直接工具调用主路径。
 - P1 DeepSeek Tool Surface 收口已完成：DeepSeek / `deepseek-beta` provider 下注册 JSON function 形态的 `apply_patch` 和 `read_file`，并保留 hidden `read` alias；`read_file` 纯逻辑已下沉到轻量 `deepseek-vibing-tools` 测试基线，避免默认验收触发超重 core unit test binary。
 - P1 内部命名与品牌统一已完成：Rust workspace、Cargo package、crate/import、npm/Python 包装层、脚本、schema、MCP/tool protocol 字符串和默认文档入口已统一到 DeepSeek Vibing。
@@ -58,7 +61,7 @@
 - 旧 P0 live smoke 中，模型曾尝试直接调用 `apply_patch` tool 并收到 `unsupported call: apply_patch`，随后通过 shell patch 完成任务。本批已通过 DeepSeek JSON function `apply_patch` 收口；最新 live smoke 未再出现该 warning。
 - 旧 P1 live smoke 中，模型曾尝试过 `read` 这个未注册工具名并收到 `unsupported call: read`。本批已通过 DeepSeek `read_file` function 和 hidden `read` alias 收口，并建立轻量测试基线；最新 live smoke 已通过，未再出现该 warning。
 - stable smoke 的输入 token 较高，虽然 prompt cache 命中正常，但 repo context prefix、base instructions 和默认上下文注入仍需要继续优化。
-- Vision Bridge 已完成单元测试和隐私测试，但尚未使用真实视觉 provider 做端到端 live smoke。
+- Vision Bridge 已完成单元测试和隐私测试，并新增 `scripts/deepseek-vision-live-smoke.sh` 作为真实 E2E 验收入口；当前本机配置尚未填写 `[auth].vision_api_key`、真实 `[vision].base_url` 和 `[vision].model`，因此脚本按预期退出 2，未发起视觉 provider 请求。
 - FIM CLI/core 已完成单元测试和 CLI 测试，但尚未使用真实 DeepSeek `/beta/completions` 做端到端 live smoke。
 
 ## 3. 总体原则
@@ -280,11 +283,11 @@
 
 工作内容：
 
-- 增加视觉 provider 配置示例。
+- 增加视觉 provider 配置示例。（已完成：README 中的 `[vision]` 示例改为要求真实 provider/model）
 - 增加更完整的缓存清理和缓存目录配置。
 - 支持不同 detail/task hint 的策略建议。
 - 验证截图、UI 错误图、仓库图片、data URL 四类输入。
-- 使用真实视觉 provider 跑一次端到端 live smoke，确认 `[auth].vision_api_key` 优先级、缓存、失败 observation 和 DeepSeek request 隐私边界。
+- 使用真实视觉 provider 跑一次端到端 live smoke，确认 `[auth].vision_api_key` 优先级、缓存、失败 observation 和 DeepSeek request 隐私边界。（脚本已完成；等待真实 vision provider 配置后运行）
 - 评估是否需要多视觉模型路由。
 
 验收标准：
@@ -356,7 +359,7 @@
 2. 完成 app-server protocol account/auth、remote plugin backend、realtime protocol 硬删。（已完成）
 3. 完成内部 rename、测试基线和品牌残留收口。（已完成）
 4. 收敛 DeepSeek `read` / `read_file` tool alias，减少 live tool loop 中的 unsupported call。（已完成，最新 live smoke 复验通过）
-5. 视发布节奏决定是否保留 app-server 作为长期本地协议层，并清理剩余 dead code。
+5. 保留 app-server 作为长期本地协议层，持续清理云端/backend dead code。
 6. 做 Vision Bridge、FIM、eval 和 sandbox 的产品化增强。
 
 这个顺序的原因是：真实 API 验证和用户表面收口最容易暴露 MVP 是否可用；auth/config 迁移影响持久化路径，必须早定；内部 rename 应放在主路径稳定之后，避免把功能问题和命名问题混在一起。

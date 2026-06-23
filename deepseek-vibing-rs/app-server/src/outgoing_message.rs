@@ -266,16 +266,6 @@ impl OutgoingMessageSender {
         self.request_contexts.lock().await.len()
     }
 
-    pub(crate) async fn send_request(
-        &self,
-        request: ServerRequestPayload,
-    ) -> (RequestId, oneshot::Receiver<ClientRequestResult>) {
-        self.send_request_to_connections(
-            /*connection_ids*/ None, request, /*thread_id*/ None,
-        )
-        .await
-    }
-
     fn next_request_id(&self) -> RequestId {
         RequestId::Integer(self.next_server_request_id.fetch_add(1, Ordering::Relaxed))
     }
