@@ -1,0 +1,25 @@
+
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-utils-plugins"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "deepseek_vibing_utils_plugins"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-exec-server = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt"] }

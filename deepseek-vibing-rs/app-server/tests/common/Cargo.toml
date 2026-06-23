@@ -1,0 +1,39 @@
+[package]
+name = "deepseek-vibing-app-test-support"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "app_test_support"
+path = "lib.rs"
+test = false
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+base64 = { workspace = true }
+chrono = { workspace = true }
+deepseek-vibing-app-server-protocol = { workspace = true }
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-core = { workspace = true }
+deepseek-vibing-features = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-models-manager = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-utils-cargo-bin = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = [
+    "io-std",
+    "macros",
+    "process",
+    "rt-multi-thread",
+] }
+uuid = { workspace = true }
+wiremock = { workspace = true }
+core_test_support = { package = "deepseek-vibing-core-test-support", path = "../../../core/tests/common" }
+shlex = { workspace = true }

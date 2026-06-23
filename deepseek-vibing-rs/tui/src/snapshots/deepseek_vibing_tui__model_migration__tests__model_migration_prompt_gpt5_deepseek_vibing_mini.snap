@@ -1,0 +1,15 @@
+---
+source: tui/src/model_migration.rs
+expression: terminal.backend()
+---
+
+> DeepSeekVibing just got an upgrade. Introducing gpt-5.1-deepseek-vibing-mini.
+
+  We recommend switching from gpt-5-deepseek-vibing-mini to
+  gpt-5.1-deepseek-vibing-mini.
+
+  Optimized for DeepSeek Vibing. Cheaper, faster, but less capable.
+  Learn more about gpt-5.1-deepseek-vibing-mini at
+  https://www.deepseek-vibing.com/models/gpt-5.1-deepseek-vibing-mini
+
+  Press enter to continue

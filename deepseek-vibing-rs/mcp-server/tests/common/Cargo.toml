@@ -1,0 +1,35 @@
+[package]
+name = "deepseek-vibing-mcp-test-support"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "mcp_test_support"
+path = "lib.rs"
+test = false
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-mcp-server = { workspace = true }
+deepseek-vibing-terminal-detection = { workspace = true }
+deepseek-vibing-utils-cargo-bin = { workspace = true }
+rmcp = { workspace = true }
+os_info = { workspace = true }
+pretty_assertions = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = [
+    "io-std",
+    "macros",
+    "process",
+    "rt-multi-thread",
+] }
+wiremock = { workspace = true }
+core_test_support = { package = "deepseek-vibing-core-test-support", path = "../../../core/tests/common" }
+shlex = { workspace = true }

@@ -1,0 +1,19 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-extension-api"
+version.workspace = true
+
+[lib]
+name = "deepseek_vibing_extension_api"
+path = "src/lib.rs"
+test = false
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-tools = { workspace = true }

@@ -1,0 +1,95 @@
+use std::sync::Arc;
+
+use deepseek_vibing_api::AuthProvider;
+use deepseek_vibing_api::SharedAuthProvider;
+use deepseek_vibing_auth::AuthManager;
+use deepseek_vibing_auth::DeepSeekVibingAuth;
+use deepseek_vibing_model_provider_info::ModelProviderInfo;
+use http::HeaderMap;
+
+use crate::bearer_auth_provider::BearerAuthProvider;
+
+// Some providers are meant to send no auth headers. Examples include local OSS
+// providers and custom test providers with `requires_openai_auth = false`.
+#[derive(Clone, Debug)]
+struct UnauthenticatedAuthProvider;
+
+impl AuthProvider for UnauthenticatedAuthProvider {
+    fn add_auth_headers(&self, _headers: &mut HeaderMap) {}
+}
+
+pub fn unauthenticated_auth_provider() -> SharedAuthProvider {
+    Arc::new(UnauthenticatedAuthProvider)
+}
+
+/// Returns the provider-scoped auth manager when this provider uses command-backed auth.
+///
+/// Providers without custom auth continue using the caller-supplied base manager, when present.
+pub(crate) fn auth_manager_for_provider(
+    auth_manager: Option<Arc<AuthManager>>,
+    provider: &ModelProviderInfo,
+) -> Option<Arc<AuthManager>> {
+    match provider.auth.clone() {
+        Some(config) => Some(AuthManager::external_bearer_only(config)),
+        None => auth_manager,
+    }
+}
+
+pub(crate) fn resolve_provider_auth(
+    auth: Option<&DeepSeekVibingAuth>,
+    provider: &ModelProviderInfo,
+) -> deepseek_vibing_protocol::error::Result<SharedAuthProvider> {
+    if let Some(auth) = bearer_auth_for_provider(provider)? {
+        return Ok(Arc::new(auth));
+    }
+
+    Ok(match auth {
+        Some(auth) => auth_provider_from_auth(auth),
+        None => unauthenticated_auth_provider(),
+    })
+}
+
+fn bearer_auth_for_provider(
+    provider: &ModelProviderInfo,
+) -> deepseek_vibing_protocol::error::Result<Option<BearerAuthProvider>> {
+    if let Some(api_key) = provider.api_key()? {
+        return Ok(Some(BearerAuthProvider::new(api_key)));
+    }
+
+    if let Some(token) = provider.experimental_bearer_token.clone() {
+        return Ok(Some(BearerAuthProvider::new(token)));
+    }
+
+    Ok(None)
+}
+
+/// Builds request-header auth for a first-party DeepSeekVibing auth snapshot.
+pub fn auth_provider_from_auth(auth: &DeepSeekVibingAuth) -> SharedAuthProvider {
+    match auth {
+        DeepSeekVibingAuth::AgentIdentity(_) => unauthenticated_auth_provider(),
+        DeepSeekVibingAuth::ApiKey(_)
+        | DeepSeekVibingAuth::Chatgpt(_)
+        | DeepSeekVibingAuth::ChatgptAuthTokens(_) => Arc::new(BearerAuthProvider {
+            token: auth.get_token().ok(),
+            account_id: auth.get_account_id(),
+            is_fedramp_account: auth.is_fedramp_account(),
+        }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use deepseek_vibing_model_provider_info::WireApi;
+    use deepseek_vibing_model_provider_info::create_oss_provider_with_base_url;
+
+    use super::*;
+
+    #[test]
+    fn unauthenticated_auth_provider_adds_no_headers() {
+        let provider =
+            create_oss_provider_with_base_url("http://localhost:11434/v1", WireApi::Responses);
+        let auth = resolve_provider_auth(/*auth*/ None, &provider).expect("auth should resolve");
+
+        assert!(auth.to_auth_headers().is_empty());
+    }
+}

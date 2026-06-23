@@ -1,0 +1,7 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "execpolicy-legacy",
+    crate_name = "deepseek_vibing_execpolicy_legacy",
+    compile_data = ["src/default.policy"],
+)

@@ -1,0 +1,34 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-analytics"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "deepseek_vibing_analytics"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-app-server-protocol = { workspace = true }
+deepseek-vibing-git-utils = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-model-provider = { workspace = true }
+deepseek-vibing-plugin = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+os_info = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha1 = { workspace = true }
+tokio = { workspace = true, features = [
+    "macros",
+    "rt-multi-thread",
+] }
+tracing = { workspace = true, features = ["log"] }
+
+[dev-dependencies]
+deepseek-vibing-utils-absolute-path = { workspace = true }
+pretty_assertions = { workspace = true }

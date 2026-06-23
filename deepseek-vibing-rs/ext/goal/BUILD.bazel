@@ -1,0 +1,10 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "goal",
+    crate_name = "deepseek_vibing_goal_extension",
+    compile_data = glob([
+        "templates/**",
+    ]),
+    integration_compile_data_extra = ["src/accounting.rs"],
+)

@@ -1,0 +1,56 @@
+id = "rust_multi_file_math"
+title = "Fix a small multi-file math API"
+tags = ["rust", "multi_file"]
+prompt = "Fix this two-file crate so the public math API behaves as the tests expect. Keep module boundaries simple."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_multi_file_math"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+mod math;
+
+pub use math::double;
+
+pub fn total(values: &[i32]) -> i32 {
+    math::sum(values)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn doubles_values() {
+        assert_eq!(double(4), 8);
+    }
+
+    #[test]
+    fn totals_all_values() {
+        assert_eq!(total(&[1, 2, 3, 4]), 10);
+        assert_eq!(total(&[]), 0);
+    }
+}
+"""
+
+[[files]]
+path = "src/math.rs"
+content = """
+pub fn double(value: i32) -> i32 {
+    value + value + 1
+}
+
+pub fn sum(values: &[i32]) -> i32 {
+    values.iter().sum::<i32>() + 1
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]

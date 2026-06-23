@@ -1,0 +1,78 @@
+[package]
+name = "deepseek-vibing-exec"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+autotests = false
+
+[[bin]]
+name = "deepseek-vibing-exec"
+path = "src/main.rs"
+
+[lib]
+name = "deepseek_vibing_exec"
+path = "src/lib.rs"
+doctest = false
+
+[[test]]
+name = "all"
+path = "tests/all.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+deepseek-vibing-arg0 = { workspace = true }
+deepseek-vibing-app-server-client = { workspace = true }
+deepseek-vibing-app-server-protocol = { workspace = true }
+deepseek-vibing-cloud-config = { workspace = true }
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-core = { workspace = true }
+deepseek-vibing-feedback = { workspace = true }
+deepseek-vibing-git-utils = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-model-provider-info = { workspace = true }
+deepseek-vibing-otel = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+deepseek-vibing-utils-cli = { workspace = true }
+deepseek-vibing-utils-oss = { workspace = true }
+deepseek-vibing-utils-sandbox-summary = { workspace = true }
+owo-colors = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+supports-color = { workspace = true }
+tokio = { workspace = true, features = [
+    "io-std",
+    "macros",
+    "process",
+    "rt-multi-thread",
+    "signal",
+] }
+tracing = { workspace = true, features = ["log"] }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+ts-rs = { workspace = true, features = [
+    "uuid-impl",
+    "serde-json-impl",
+    "no-serde-warnings",
+] }
+uuid = { workspace = true }
+
+
+[dev-dependencies]
+assert_cmd = { workspace = true }
+deepseek-vibing-apply-patch = { workspace = true }
+deepseek-vibing-utils-cargo-bin = { workspace = true }
+core_test_support = { workspace = true }
+libc = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+predicates = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+uuid = { workspace = true }
+walkdir = { workspace = true }
+wiremock = { workspace = true }

@@ -1,0 +1,21 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-memories-read"
+version.workspace = true
+
+[lib]
+name = "deepseek_vibing_memories_read"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-shell-command = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

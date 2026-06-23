@@ -1,0 +1,26 @@
+[package]
+name = "deepseek-vibing-arg0"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "deepseek_vibing_arg0"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+deepseek-vibing-apply-patch = { workspace = true }
+deepseek-vibing-exec-server = { workspace = true }
+deepseek-vibing-linux-sandbox = { workspace = true }
+deepseek-vibing-sandboxing = { workspace = true }
+deepseek-vibing-shell-escalation = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+deepseek-vibing-utils-home-dir = { workspace = true }
+dotenvy = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }

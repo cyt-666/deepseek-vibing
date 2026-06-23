@@ -1,0 +1,53 @@
+[package]
+name = "deepseek-vibing-core-test-support"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "core_test_support"
+path = "lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+assert_cmd = { workspace = true }
+base64 = { workspace = true }
+deepseek-vibing-arg0 = { workspace = true }
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-core = { workspace = true }
+deepseek-vibing-extension-api = { workspace = true }
+deepseek-vibing-exec-server = { workspace = true }
+deepseek-vibing-features = { workspace = true }
+deepseek-vibing-hooks = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-model-provider-info = { workspace = true }
+deepseek-vibing-models-manager = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+deepseek-vibing-utils-cargo-bin = { workspace = true }
+ctor = { workspace = true }
+futures = { workspace = true }
+notify = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+regex-lite = { workspace = true }
+serde_json = { workspace = true }
+similar = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["net", "time"] }
+tokio-tungstenite = { workspace = true }
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true }
+walkdir = { workspace = true }
+wiremock = { workspace = true }
+shlex = { workspace = true }
+zstd = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+reqwest = { workspace = true }

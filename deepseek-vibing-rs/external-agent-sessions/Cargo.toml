@@ -1,0 +1,25 @@
+[package]
+name = "deepseek-vibing-external-agent-sessions"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+doctest = false
+name = "deepseek_vibing_external_agent_sessions"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+chrono = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-utils-output-truncation = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+
+[dev-dependencies]
+deepseek-vibing-app-server-protocol = { workspace = true }
+tempfile = { workspace = true }

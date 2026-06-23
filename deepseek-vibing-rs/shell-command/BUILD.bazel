@@ -1,0 +1,7 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "shell-command",
+    crate_name = "deepseek_vibing_shell_command",
+    compile_data = ["src/command_safety/powershell_parser.ps1"],
+)

@@ -1,0 +1,10 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "models-manager",
+    crate_name = "deepseek_vibing_models_manager",
+    compile_data = [
+        "models.json",
+        "prompt.md",
+    ],
+)

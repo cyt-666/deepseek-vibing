@@ -1,0 +1,19 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-skills"
+version.workspace = true
+build = "build.rs"
+
+[lib]
+doctest = false
+name = "deepseek_vibing_skills"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-utils-absolute-path = { workspace = true }
+include_dir = { workspace = true }
+thiserror = { workspace = true }

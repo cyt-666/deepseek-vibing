@@ -1,0 +1,21 @@
+[package]
+name = "deepseek-vibing-install-context"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "deepseek_vibing_install_context"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-utils-absolute-path = { workspace = true }
+deepseek-vibing-utils-home-dir = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }

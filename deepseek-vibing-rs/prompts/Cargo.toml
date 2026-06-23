@@ -1,0 +1,24 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-prompts"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "deepseek_vibing_prompts"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+deepseek-vibing-git-utils = { workspace = true }
+deepseek-vibing-execpolicy = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+deepseek-vibing-utils-template = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

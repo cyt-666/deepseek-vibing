@@ -1,0 +1,25 @@
+[package]
+name = "deepseek-vibing-message-history"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "deepseek_vibing_message_history"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-config = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["fs", "io-util", "rt"] }
+tracing = { workspace = true, features = ["log"] }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

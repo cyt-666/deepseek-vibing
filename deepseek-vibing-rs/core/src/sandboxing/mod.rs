@@ -1,0 +1,185 @@
+/*
+Module: sandboxing
+
+Core-owned adapter types for exec/runtime plumbing. Policy selection and
+command transformation live in the deepseek-vibing-sandboxing crate; this module keeps
+the exec-only metadata and translates transformed sandbox commands back into
+ExecRequest for execution.
+*/
+
+use crate::exec::ExecCapturePolicy;
+use crate::exec::ExecExpiration;
+use crate::exec::StdoutStream;
+use crate::exec::WindowsSandboxFilesystemOverrides;
+use crate::exec::execute_exec_request;
+#[cfg(target_os = "macos")]
+use crate::spawn::DEEPSEEK_VIBING_SANDBOX_ENV_VAR;
+use crate::spawn::DEEPSEEK_VIBING_SANDBOX_NETWORK_DISABLED_ENV_VAR;
+use deepseek_vibing_network_proxy::NetworkProxy;
+use deepseek_vibing_protocol::config_types::WindowsSandboxLevel;
+use deepseek_vibing_protocol::exec_output::ExecToolCallOutput;
+use deepseek_vibing_protocol::models::PermissionProfile;
+pub use deepseek_vibing_protocol::models::SandboxPermissions;
+use deepseek_vibing_protocol::permissions::FileSystemSandboxPolicy;
+use deepseek_vibing_protocol::permissions::NetworkSandboxPolicy;
+use deepseek_vibing_protocol::protocol::SandboxPolicy;
+use deepseek_vibing_sandboxing::SandboxExecRequest;
+use deepseek_vibing_sandboxing::SandboxType;
+use deepseek_vibing_sandboxing::compatibility_sandbox_policy_for_permission_profile;
+use deepseek_vibing_utils_absolute_path::AbsolutePathBuf;
+use std::collections::HashMap;
+
+#[derive(Debug)]
+pub(crate) struct ExecOptions {
+    pub(crate) expiration: ExecExpiration,
+    pub(crate) capture_policy: ExecCapturePolicy,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct ExecServerEnvConfig {
+    pub(crate) policy: deepseek_vibing_exec_server::ExecEnvPolicy,
+    pub(crate) local_policy_env: HashMap<String, String>,
+}
+
+#[derive(Debug)]
+pub struct ExecRequest {
+    pub command: Vec<String>,
+    pub cwd: AbsolutePathBuf,
+    pub env: HashMap<String, String>,
+    pub(crate) exec_server_env_config: Option<ExecServerEnvConfig>,
+    pub network: Option<NetworkProxy>,
+    pub expiration: ExecExpiration,
+    pub capture_policy: ExecCapturePolicy,
+    pub sandbox: SandboxType,
+    pub windows_sandbox_policy_cwd: AbsolutePathBuf,
+    pub windows_sandbox_workspace_roots: Vec<AbsolutePathBuf>,
+    pub windows_sandbox_level: WindowsSandboxLevel,
+    pub windows_sandbox_private_desktop: bool,
+    pub permission_profile: PermissionProfile,
+    pub file_system_sandbox_policy: FileSystemSandboxPolicy,
+    pub network_sandbox_policy: NetworkSandboxPolicy,
+    pub(crate) windows_sandbox_filesystem_overrides: Option<WindowsSandboxFilesystemOverrides>,
+    pub arg0: Option<String>,
+}
+
+impl ExecRequest {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        command: Vec<String>,
+        cwd: AbsolutePathBuf,
+        env: HashMap<String, String>,
+        network: Option<NetworkProxy>,
+        expiration: ExecExpiration,
+        capture_policy: ExecCapturePolicy,
+        sandbox: SandboxType,
+        windows_sandbox_workspace_roots: Vec<AbsolutePathBuf>,
+        windows_sandbox_level: WindowsSandboxLevel,
+        windows_sandbox_private_desktop: bool,
+        permission_profile: PermissionProfile,
+        arg0: Option<String>,
+    ) -> Self {
+        let windows_sandbox_policy_cwd = cwd.clone();
+        let (file_system_sandbox_policy, network_sandbox_policy) =
+            permission_profile.to_runtime_permissions();
+        Self {
+            command,
+            cwd,
+            env,
+            exec_server_env_config: None,
+            network,
+            expiration,
+            capture_policy,
+            sandbox,
+            windows_sandbox_policy_cwd,
+            windows_sandbox_workspace_roots,
+            windows_sandbox_level,
+            windows_sandbox_private_desktop,
+            permission_profile,
+            file_system_sandbox_policy,
+            network_sandbox_policy,
+            windows_sandbox_filesystem_overrides: None,
+            arg0,
+        }
+    }
+
+    pub(crate) fn compatibility_sandbox_policy(&self) -> SandboxPolicy {
+        compatibility_sandbox_policy_for_permission_profile(
+            &self.permission_profile,
+            &self.file_system_sandbox_policy,
+            self.network_sandbox_policy,
+            self.windows_sandbox_policy_cwd.as_path(),
+        )
+    }
+
+    pub(crate) fn from_sandbox_exec_request(
+        request: SandboxExecRequest,
+        options: ExecOptions,
+        windows_sandbox_policy_cwd: AbsolutePathBuf,
+        windows_sandbox_workspace_roots: Vec<AbsolutePathBuf>,
+    ) -> Self {
+        let SandboxExecRequest {
+            command,
+            cwd,
+            mut env,
+            network,
+            sandbox,
+            windows_sandbox_level,
+            windows_sandbox_private_desktop,
+            permission_profile,
+            file_system_sandbox_policy,
+            network_sandbox_policy,
+            arg0,
+        } = request;
+        let ExecOptions {
+            expiration,
+            capture_policy,
+        } = options;
+        if !network_sandbox_policy.is_enabled() {
+            env.insert(
+                DEEPSEEK_VIBING_SANDBOX_NETWORK_DISABLED_ENV_VAR.to_string(),
+                "1".to_string(),
+            );
+        }
+        #[cfg(target_os = "macos")]
+        if sandbox == SandboxType::MacosSeatbelt {
+            env.insert(
+                DEEPSEEK_VIBING_SANDBOX_ENV_VAR.to_string(),
+                "seatbelt".to_string(),
+            );
+        }
+        Self {
+            command,
+            cwd,
+            env,
+            exec_server_env_config: None,
+            network,
+            expiration,
+            capture_policy,
+            sandbox,
+            windows_sandbox_policy_cwd,
+            windows_sandbox_workspace_roots,
+            windows_sandbox_level,
+            windows_sandbox_private_desktop,
+            permission_profile,
+            file_system_sandbox_policy,
+            network_sandbox_policy,
+            windows_sandbox_filesystem_overrides: None,
+            arg0,
+        }
+    }
+}
+
+pub async fn execute_env(
+    exec_request: ExecRequest,
+    stdout_stream: Option<StdoutStream>,
+) -> deepseek_vibing_protocol::error::Result<ExecToolCallOutput> {
+    execute_exec_request(exec_request, stdout_stream, /*after_spawn*/ None).await
+}
+
+pub async fn execute_exec_request_with_after_spawn(
+    exec_request: ExecRequest,
+    stdout_stream: Option<StdoutStream>,
+    after_spawn: Option<Box<dyn FnOnce() + Send>>,
+) -> deepseek_vibing_protocol::error::Result<ExecToolCallOutput> {
+    execute_exec_request(exec_request, stdout_stream, after_spawn).await
+}

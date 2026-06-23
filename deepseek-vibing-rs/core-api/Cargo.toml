@@ -1,0 +1,29 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-core-api"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "deepseek_vibing_core_api"
+path = "src/lib.rs"
+test = false
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-app-server-protocol = { workspace = true }
+deepseek-vibing-arg0 = { workspace = true }
+deepseek-vibing-analytics = { workspace = true }
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-core = { workspace = true }
+deepseek-vibing-extension-api = { workspace = true }
+deepseek-vibing-exec-server = { workspace = true }
+deepseek-vibing-features = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-model-provider-info = { workspace = true }
+deepseek-vibing-models-manager = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }

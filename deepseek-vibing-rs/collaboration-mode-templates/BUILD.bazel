@@ -1,0 +1,12 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "collaboration-mode-templates",
+    crate_name = "deepseek_vibing_collaboration_mode_templates",
+    compile_data = glob(["templates/*.md"]),
+)
+
+exports_files(
+    glob(["templates/*.md"]),
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,44 @@
+id = "rust_trim_username"
+title = "Normalize usernames"
+tags = ["rust", "edge_case"]
+prompt = "Fix the username normalizer so the tests pass. Preserve the function signature."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_trim_username"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+pub fn normalize_username(input: &str) -> Option<String> {
+    if input.is_empty() {
+        None
+    } else {
+        Some(input.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trims_and_lowercases_names() {
+        assert_eq!(normalize_username(" Ada "), Some("ada".to_string()));
+        assert_eq!(normalize_username("BOB"), Some("bob".to_string()));
+    }
+
+    #[test]
+    fn rejects_blank_names() {
+        assert_eq!(normalize_username("   "), None);
+    }
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]

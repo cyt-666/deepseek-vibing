@@ -1,0 +1,7 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "otel",
+    crate_name = "deepseek_vibing_otel",
+    integration_test_args = ["--test-threads=1"],
+)

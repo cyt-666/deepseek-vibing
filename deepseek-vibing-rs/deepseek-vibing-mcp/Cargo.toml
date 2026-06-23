@@ -1,0 +1,44 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-mcp"
+version.workspace = true
+
+[lib]
+name = "deepseek_vibing_mcp"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+async-channel = { workspace = true }
+deepseek-vibing-async-utils = { workspace = true }
+deepseek-vibing-api = { workspace = true }
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-exec-server = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-model-provider = { workspace = true }
+deepseek-vibing-otel = { workspace = true }
+deepseek-vibing-plugin = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-rmcp-client = { workspace = true }
+deepseek-vibing-utils-plugins = { workspace = true }
+futures = { workspace = true }
+regex-lite = { workspace = true }
+rmcp = { workspace = true, default-features = false, features = ["base64", "macros", "schemars", "server"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha1 = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["io-util", "macros", "rt-multi-thread"] }
+tokio-util = { workspace = true, features = ["rt"] }
+tracing = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+rmcp = { workspace = true, default-features = false, features = ["base64", "macros", "schemars", "server"] }
+tempfile = { workspace = true }

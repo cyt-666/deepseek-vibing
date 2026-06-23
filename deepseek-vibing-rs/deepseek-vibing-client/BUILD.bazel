@@ -1,0 +1,7 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "deepseek-vibing-client",
+    crate_name = "deepseek_vibing_client",
+    compile_data = glob(["tests/fixtures/**"]),
+)

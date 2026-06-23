@@ -1,0 +1,15 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "skills",
+    crate_name = "deepseek_vibing_skills",
+    compile_data = glob(
+        include = ["**"],
+        exclude = [
+            "**/* *",
+            "BUILD.bazel",
+            "Cargo.toml",
+        ],
+        allow_empty = True,
+    ),
+)

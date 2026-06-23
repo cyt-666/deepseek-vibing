@@ -1,0 +1,7 @@
+# Core crate ownership.
+/deepseek-vibing-rs/core/ @openai/deepseek-vibing-core-agent-team
+/deepseek-vibing-rs/ext/extension-api/ @openai/deepseek-vibing-core-agent-team
+/deepseek-vibing-rs/prompts/ @openai/deepseek-vibing-core-agent-team
+
+# Keep ownership changes reviewed by the same team.
+/.github/CODEOWNERS @openai/deepseek-vibing-core-agent-team

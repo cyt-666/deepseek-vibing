@@ -1,0 +1,27 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-model-provider-info"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "deepseek_vibing_model_provider_info"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-api = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+http = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+deepseek-vibing-utils-absolute-path = { workspace = true }
+maplit = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+toml = { workspace = true }

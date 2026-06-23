@@ -1,0 +1,35 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-model-provider"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "deepseek_vibing_model_provider"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+deepseek-vibing-api = { workspace = true }
+deepseek-vibing-aws-auth = { workspace = true }
+deepseek-vibing-client = { workspace = true }
+deepseek-vibing-feedback = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-model-provider-info = { workspace = true }
+deepseek-vibing-models-manager = { workspace = true }
+deepseek-vibing-otel = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-response-debug-context = { workspace = true }
+http = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time"] }
+tracing = { workspace = true, features = ["log"] }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt"] }
+wiremock = { workspace = true }

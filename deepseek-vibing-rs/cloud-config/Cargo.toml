@@ -1,0 +1,15 @@
+[package]
+name = "deepseek-vibing-cloud-config"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+
+[lib]
+doctest = false

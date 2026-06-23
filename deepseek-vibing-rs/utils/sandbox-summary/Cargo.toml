@@ -1,0 +1,21 @@
+[package]
+name = "deepseek-vibing-utils-sandbox-summary"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-core = { workspace = true }
+deepseek-vibing-model-provider-info = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+
+[dev-dependencies]
+deepseek-vibing-utils-absolute-path = { workspace = true }
+pretty_assertions = { workspace = true }
+
+[lib]
+doctest = false

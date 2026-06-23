@@ -1,0 +1,48 @@
+id = "rust_dedupe_order"
+title = "Deduplicate while preserving order"
+tags = ["rust", "collections"]
+prompt = "Fix the dedupe helper so it removes repeats without changing the order of the first occurrence."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_dedupe_order"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+pub fn dedupe_preserve_order(values: &[String]) -> Vec<String> {
+    let mut out = values.to_vec();
+    out.sort();
+    out.dedup();
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn removes_duplicates_without_sorting() {
+        let values = vec![
+            "beta".to_string(),
+            "alpha".to_string(),
+            "beta".to_string(),
+            "gamma".to_string(),
+            "alpha".to_string(),
+        ];
+
+        assert_eq!(
+            dedupe_preserve_order(&values),
+            vec!["beta".to_string(), "alpha".to_string(), "gamma".to_string()]
+        );
+    }
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]

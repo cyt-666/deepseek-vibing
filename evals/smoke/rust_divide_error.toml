@@ -1,0 +1,40 @@
+id = "rust_divide_error"
+title = "Return an error instead of panicking"
+tags = ["rust", "error_handling"]
+prompt = "Make the division helper return a useful error for invalid input while keeping successful division unchanged."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_divide_error"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+pub fn checked_divide(a: i32, b: i32) -> Result<i32, String> {
+    Ok(a / b)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn divides_numbers() {
+        assert_eq!(checked_divide(12, 3), Ok(4));
+    }
+
+    #[test]
+    fn rejects_division_by_zero() {
+        let err = checked_divide(12, 0).expect_err("zero divisor should be an error");
+        assert!(err.contains("zero"));
+    }
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]

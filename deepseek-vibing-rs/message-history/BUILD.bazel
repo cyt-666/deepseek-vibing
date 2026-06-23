@@ -1,0 +1,6 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "message-history",
+    crate_name = "deepseek_vibing_message_history",
+)

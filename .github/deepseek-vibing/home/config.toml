@@ -1,0 +1,4 @@
+model_provider = "deepseek"
+model = "deepseek-v4-flash"
+
+# Consider setting [mcp_servers] here!

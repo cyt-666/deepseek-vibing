@@ -1,0 +1,35 @@
+id = "rust_add_function"
+title = "Implement a missing add function"
+tags = ["rust", "single_file"]
+prompt = "Update this tiny Rust crate so `cargo test --quiet` passes. Keep the public API stable and make the smallest reasonable change."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_add_function"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+pub fn add(a: i32, b: i32) -> i32 {
+    todo!("implement add")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn adds_positive_and_negative_numbers() {
+        assert_eq!(add(2, 3), 5);
+        assert_eq!(add(-4, 10), 6);
+    }
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]

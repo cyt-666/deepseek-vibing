@@ -1,0 +1,19 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-plugin"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "deepseek_vibing_plugin"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+deepseek-vibing-utils-plugins = { workspace = true }
+thiserror = { workspace = true }

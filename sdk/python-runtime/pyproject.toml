@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling>=1.24.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "deepseek-vibing-cli-bin"
+version = "0.0.0-dev"
+description = "Pinned DeepSeekVibing CLI runtime for the Python SDK"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "DeepSeek Vibing maintainers" }]
+classifiers = [
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+Homepage = "https://github.com/deepseek-vibing/deepseek-vibing"
+Repository = "https://github.com/deepseek-vibing/deepseek-vibing"
+Issues = "https://github.com/deepseek-vibing/deepseek-vibing/issues"
+
+[tool.hatch.build]
+exclude = [
+  ".venv/**",
+  ".pytest_cache/**",
+  "dist/**",
+  "build/**",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/deepseek_vibing_cli_bin"]
+include = [
+  "src/deepseek_vibing_cli_bin/deepseek-vibing-package.json",
+  "src/deepseek_vibing_cli_bin/bin/**",
+  "src/deepseek_vibing_cli_bin/deepseek-vibing-resources/**",
+  "src/deepseek_vibing_cli_bin/deepseek-vibing-path/**",
+]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+
+[tool.hatch.build.targets.sdist]
+
+[tool.hatch.build.targets.sdist.hooks.custom]
+
+[tool.uv]
+exclude-newer = "7 days"
+index-strategy = "first-index"
+
+[tool.uv.pip]
+exclude-newer = "7 days"
+index-strategy = "first-index"

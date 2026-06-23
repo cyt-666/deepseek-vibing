@@ -1,0 +1,17 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+exports_files(
+    ["repo_root.marker"],
+    visibility = ["//visibility:public"],
+)
+
+deepseek_vibing_rust_crate(
+    name = "cargo-bin",
+    crate_name = "deepseek_vibing_utils_cargo_bin",
+    compile_data = ["repo_root.marker"],
+    lib_data_extra = ["repo_root.marker"],
+    test_data_extra = ["repo_root.marker"],
+    rustc_env = {
+        "DEEPSEEK_VIBING_REPO_ROOT_MARKER": "$(rlocationpath :repo_root.marker)",
+    },
+)

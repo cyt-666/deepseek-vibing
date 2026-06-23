@@ -1,0 +1,165 @@
+[package]
+name = "deepseek-vibing-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+autobins = false
+
+[[bin]]
+name = "deepseek-vibing-tui"
+path = "src/main.rs"
+
+[[bin]]
+name = "md-events"
+path = "src/bin/md-events.rs"
+
+[lib]
+name = "deepseek_vibing_tui"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+base64 = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+clap = { workspace = true, features = ["derive"] }
+deepseek-vibing-ansi-escape = { workspace = true }
+deepseek-vibing-app-server-client = { workspace = true }
+deepseek-vibing-app-server-protocol = { workspace = true }
+deepseek-vibing-arg0 = { workspace = true }
+deepseek-vibing-install-context = { workspace = true }
+deepseek-vibing-cloud-config = { workspace = true }
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-connectors = { workspace = true }
+deepseek-vibing-core-plugins = { workspace = true }
+deepseek-vibing-core-skills = { workspace = true }
+deepseek-vibing-exec-server = { workspace = true }
+deepseek-vibing-features = { workspace = true }
+deepseek-vibing-feedback = { workspace = true }
+deepseek-vibing-file-search = { workspace = true }
+deepseek-vibing-git-utils = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-message-history = { workspace = true }
+deepseek-vibing-model-provider = { workspace = true }
+deepseek-vibing-model-provider-info = { workspace = true }
+deepseek-vibing-models-manager = { workspace = true }
+deepseek-vibing-otel = { workspace = true }
+deepseek-vibing-plugin = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-rollout = { workspace = true }
+deepseek-vibing-sandboxing = { workspace = true }
+deepseek-vibing-shell-command = { workspace = true }
+deepseek-vibing-state = { workspace = true }
+deepseek-vibing-terminal-detection = { workspace = true }
+deepseek-vibing-utils-approval-presets = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+deepseek-vibing-utils-cli = { workspace = true }
+deepseek-vibing-utils-elapsed = { workspace = true }
+deepseek-vibing-utils-fuzzy-match = { workspace = true }
+deepseek-vibing-utils-home-dir = { workspace = true }
+deepseek-vibing-utils-oss = { workspace = true }
+deepseek-vibing-utils-path = { workspace = true }
+deepseek-vibing-utils-plugins = { workspace = true }
+deepseek-vibing-utils-sandbox-summary = { workspace = true }
+deepseek-vibing-utils-sleep-inhibitor = { workspace = true }
+deepseek-vibing-utils-string = { workspace = true }
+color-eyre = { workspace = true }
+crossterm = { workspace = true, features = ["bracketed-paste", "event-stream"] }
+derive_more = { workspace = true, features = ["is_variant"] }
+diffy = { workspace = true }
+dirs = { workspace = true }
+dunce = { workspace = true }
+image = { workspace = true, features = ["jpeg", "png", "gif", "webp"] }
+itertools = { workspace = true }
+lazy_static = { workspace = true }
+pathdiff = { workspace = true }
+pulldown-cmark = { workspace = true }
+rand = { workspace = true }
+ratatui = { workspace = true, features = [
+    "scrolling-regions",
+    "unstable-backend-writer",
+    "unstable-rendered-line-info",
+    "unstable-widget-ref",
+] }
+ratatui-macros = { workspace = true }
+regex-lite = { workspace = true }
+reqwest = { workspace = true, features = ["blocking", "json"] }
+rmcp = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["preserve_order"] }
+sha2 = { workspace = true }
+shlex = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+supports-color = { workspace = true }
+tempfile = { workspace = true }
+textwrap = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = [
+    "io-std",
+    "macros",
+    "process",
+    "rt-multi-thread",
+    "signal",
+    "test-util",
+    "time",
+] }
+tokio-stream = { workspace = true, features = ["sync"] }
+toml = { workspace = true }
+tracing = { workspace = true, features = ["log"] }
+tracing-appender = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+syntect = "5"
+two-face = { version = "0.5", default-features = false, features = ["syntect-default-onig"] }
+unicode-segmentation = { workspace = true }
+unicode-width = { workspace = true }
+url = { workspace = true }
+urlencoding = { workspace = true }
+webbrowser = { workspace = true }
+uuid = { workspace = true }
+
+deepseek-vibing-windows-sandbox = { workspace = true }
+tokio-util = { workspace = true, features = ["time"] }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+cpal = "0.15"
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+which = { workspace = true }
+windows-sys = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+    "Win32_System_IO",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+] }
+winsplit = "0.1"
+
+# Clipboard support via `arboard` is not available on Android/Termux.
+# Only include it for non-Android targets so the crate builds on Android.
+[target.'cfg(not(target_os = "android"))'.dependencies]
+arboard = { workspace = true }
+
+
+[dev-dependencies]
+deepseek-vibing-cli = { workspace = true }
+deepseek-vibing-mcp = { workspace = true }
+core_test_support = { workspace = true }
+deepseek-vibing-utils-cargo-bin = { workspace = true }
+assert_matches = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+insta = { workspace = true }
+pretty_assertions = { workspace = true }
+rand = { workspace = true }
+serial_test = { workspace = true }
+vt100 = { workspace = true }
+uuid = { workspace = true }
+wiremock = { workspace = true }

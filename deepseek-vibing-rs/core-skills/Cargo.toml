@@ -1,0 +1,42 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-core-skills"
+version.workspace = true
+
+[lib]
+doctest = false
+name = "deepseek_vibing_core_skills"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+deepseek-vibing-analytics = { workspace = true }
+deepseek-vibing-app-server-protocol = { workspace = true }
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-exec-server = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-model-provider = { workspace = true }
+deepseek-vibing-otel = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-skills = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+deepseek-vibing-utils-output-truncation = { workspace = true }
+deepseek-vibing-utils-plugins = { workspace = true }
+dirs = { workspace = true }
+dunce = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+shlex = { workspace = true }
+tokio = { workspace = true, features = ["fs", "macros", "rt"] }
+toml = { workspace = true }
+tracing = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }

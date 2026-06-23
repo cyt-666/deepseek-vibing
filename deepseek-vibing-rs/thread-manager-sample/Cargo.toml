@@ -1,0 +1,18 @@
+[package]
+name = "deepseek-vibing-thread-manager-sample"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+# Keep this sample limited to a single DeepSeekVibing workspace dependency.
+# Add new DeepSeekVibing surface area to `deepseek-vibing-core-api` instead of depending on
+# additional `deepseek-vibing-*` crates here.
+deepseek-vibing-core-api = { workspace = true }
+tracing = { workspace = true }

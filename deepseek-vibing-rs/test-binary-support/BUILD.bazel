@@ -1,0 +1,7 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "test-binary-support",
+    crate_name = "deepseek_vibing_test_binary_support",
+    crate_srcs = ["lib.rs"],
+)

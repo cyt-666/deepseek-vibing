@@ -1,0 +1,7 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "deepseek-vibing-experimental-api-macros",
+    crate_name = "deepseek_vibing_experimental_api_macros",
+    proc_macro = True,
+)

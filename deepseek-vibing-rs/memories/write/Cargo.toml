@@ -1,0 +1,46 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "deepseek-vibing-memories-write"
+version.workspace = true
+
+[lib]
+name = "deepseek_vibing_memories_write"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+chrono = { workspace = true }
+deepseek-vibing-core = { workspace = true }
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-features = { workspace = true }
+deepseek-vibing-git-utils = { workspace = true }
+deepseek-vibing-auth = { workspace = true }
+deepseek-vibing-otel = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+deepseek-vibing-rollout = { workspace = true }
+deepseek-vibing-rollout-trace = { workspace = true }
+deepseek-vibing-secrets = { workspace = true }
+deepseek-vibing-state = { workspace = true }
+deepseek-vibing-terminal-detection = { workspace = true }
+deepseek-vibing-utils-absolute-path = { workspace = true }
+deepseek-vibing-utils-output-truncation = { workspace = true }
+deepseek-vibing-utils-template = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["fs", "rt", "sync", "time"] }
+tracing = { workspace = true, features = ["log"] }
+uuid = { workspace = true, features = ["v4", "v5"] }
+
+[dev-dependencies]
+deepseek-vibing-models-manager = { workspace = true }
+core_test_support = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["fs", "macros"] }
+wiremock = { workspace = true }

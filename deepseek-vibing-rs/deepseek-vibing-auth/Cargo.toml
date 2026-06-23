@@ -1,0 +1,27 @@
+[package]
+name = "deepseek-vibing-auth"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "deepseek_vibing_auth"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+deepseek-vibing-client = { workspace = true }
+deepseek-vibing-config = { workspace = true }
+deepseek-vibing-model-provider-info = { workspace = true }
+deepseek-vibing-otel = { workspace = true }
+deepseek-vibing-protocol = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+tracing = { workspace = true }

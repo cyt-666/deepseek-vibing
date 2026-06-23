@@ -1,0 +1,9 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "memories",
+    crate_name = "deepseek_vibing_memories_extension",
+    compile_data = glob([
+        "templates/**",
+    ]),
+)

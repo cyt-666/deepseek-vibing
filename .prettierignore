@@ -1,0 +1,7 @@
+/deepseek-vibing-cli/dist
+/deepseek-vibing-cli/node_modules
+pnpm-lock.yaml
+
+prompt.md
+*_prompt.md
+*_instructions.md

@@ -1,0 +1,9 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "rmcp-client",
+    crate_name = "deepseek_vibing_rmcp_client",
+    extra_binaries = [
+        "//deepseek-vibing-rs/cli:deepseek-vibing",
+    ],
+)

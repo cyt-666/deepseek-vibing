@@ -1,0 +1,6 @@
+load("//:defs.bzl", "deepseek_vibing_rust_crate")
+
+deepseek_vibing_rust_crate(
+    name = "thread-manager-sample",
+    crate_name = "deepseek_vibing_thread_manager_sample",
+)
