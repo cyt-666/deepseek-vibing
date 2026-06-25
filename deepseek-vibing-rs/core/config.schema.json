@@ -4495,6 +4495,24 @@
         "cache": {
           "type": "boolean"
         },
+        "cache_dir": {
+          "$ref": "#/definitions/AbsolutePathBuf"
+        },
+        "cache_max_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "cache_max_entries": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "cache_ttl_seconds": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
         "enabled": {
           "type": "boolean"
         },

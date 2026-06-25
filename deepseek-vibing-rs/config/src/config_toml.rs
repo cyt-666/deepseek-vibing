@@ -137,6 +137,10 @@ pub struct VisionToml {
     pub base_url: Option<String>,
     pub api_key_env: Option<String>,
     pub cache: Option<bool>,
+    pub cache_dir: Option<AbsolutePathBuf>,
+    pub cache_max_entries: Option<usize>,
+    pub cache_max_bytes: Option<u64>,
+    pub cache_ttl_seconds: Option<u64>,
     pub timeout_ms: Option<u64>,
     pub send_original_images_to_main_model: Option<bool>,
 }

@@ -30,6 +30,11 @@ enabled = true
 provider = "openai_compatible"
 model = "<your-vision-model>"
 base_url = "https://your-vision-provider.example/v1"
+cache = true
+cache_max_entries = 500
+cache_max_bytes = 104857600
+# cache_dir = "/absolute/path/to/vision-cache"
+# cache_ttl_seconds = 604800
 
 [trajectory]
 enabled = "auto"
@@ -77,6 +82,11 @@ Run the Vision Bridge live smoke after configuring `[auth].vision_api_key`,
 ```shell
 scripts/deepseek-vision-live-smoke.sh
 ```
+
+Vision Bridge converts local screenshots, UI error images, repository images,
+and data URL images into structured text observations before the DeepSeek model
+sees the turn. Cached observations live under the DeepSeek Vibing home by default
+and can be bounded with the `[vision]` cache settings above.
 
 Run the DeepSeek FIM live smoke against `/beta/completions`:
 

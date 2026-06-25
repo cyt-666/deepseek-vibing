@@ -11040,6 +11040,10 @@ deepseek_api_key = "sk-file-secret"
 #[tokio::test]
 async fn vision_config_loads_defaults_and_overrides() -> std::io::Result<()> {
     let deepseek_vibing_home = tempdir()?;
+    let cache_dir = AbsolutePathBuf::resolve_path_against_base(
+        "vision-cache-test",
+        deepseek_vibing_home.path(),
+    );
     let cfg = ConfigToml {
         vision: Some(VisionToml {
             enabled: Some(true),
@@ -11048,6 +11052,10 @@ async fn vision_config_loads_defaults_and_overrides() -> std::io::Result<()> {
             base_url: Some("http://127.0.0.1:9999/v1".to_string()),
             api_key_env: Some("UNIT_VISION_API_KEY".to_string()),
             cache: Some(false),
+            cache_dir: Some(cache_dir.clone()),
+            cache_max_entries: Some(12),
+            cache_max_bytes: Some(3456),
+            cache_ttl_seconds: Some(789),
             timeout_ms: Some(1234),
             send_original_images_to_main_model: Some(false),
         }),
@@ -11067,6 +11075,10 @@ async fn vision_config_loads_defaults_and_overrides() -> std::io::Result<()> {
     assert_eq!(config.vision.base_url, "http://127.0.0.1:9999/v1");
     assert_eq!(config.vision.api_key_env, "UNIT_VISION_API_KEY");
     assert!(!config.vision.cache);
+    assert_eq!(config.vision.cache_dir, Some(cache_dir));
+    assert_eq!(config.vision.cache_max_entries, 12);
+    assert_eq!(config.vision.cache_max_bytes, 3456);
+    assert_eq!(config.vision.cache_ttl_seconds, Some(789));
     assert_eq!(config.vision.timeout_ms, 1234);
     assert!(!config.vision.send_original_images_to_main_model);
     Ok(())

@@ -284,11 +284,11 @@
 工作内容：
 
 - 增加视觉 provider 配置示例。（已完成：README 中的 `[vision]` 示例改为要求真实 provider/model）
-- 增加更完整的缓存清理和缓存目录配置。
-- 支持不同 detail/task hint 的策略建议。
-- 验证截图、UI 错误图、仓库图片、data URL 四类输入。
+- 增加更完整的缓存清理和缓存目录配置。（已完成第一批：`cache_dir`、entry/bytes/TTL 上限和 best-effort prune）
+- 支持不同 detail/task hint 的策略建议。（已完成第一批：README 说明 Vision Bridge 对截图、UI 错误图、仓库图片、data URL 的 observation-first 用法）
+- 验证截图、UI 错误图、仓库图片、data URL 四类输入。（已完成第一批：补充 cache/data URL/privacy 相关测试，真实 E2E smoke 已覆盖图片 observation 主路径）
 - 使用真实视觉 provider 跑一次端到端 live smoke，确认 `[auth].vision_api_key` 优先级、缓存、失败 observation 和 DeepSeek request 隐私边界。（已完成：`scripts/deepseek-vision-live-smoke.sh` 通过）
-- 评估是否需要多视觉模型路由。
+- 评估是否需要多视觉模型路由。（后续保留）
 
 验收标准：
 

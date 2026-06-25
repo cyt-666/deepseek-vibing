@@ -1210,6 +1210,10 @@ pub struct VisionConfig {
     pub base_url: String,
     pub api_key_env: String,
     pub cache: bool,
+    pub cache_dir: Option<AbsolutePathBuf>,
+    pub cache_max_entries: usize,
+    pub cache_max_bytes: u64,
+    pub cache_ttl_seconds: Option<u64>,
     pub timeout_ms: u64,
     pub send_original_images_to_main_model: bool,
 }
@@ -1223,6 +1227,10 @@ impl Default for VisionConfig {
             base_url: "https://example.com/v1".to_string(),
             api_key_env: "VISION_API_KEY".to_string(),
             cache: true,
+            cache_dir: None,
+            cache_max_entries: 500,
+            cache_max_bytes: 100 * 1024 * 1024,
+            cache_ttl_seconds: None,
             timeout_ms: 60_000,
             send_original_images_to_main_model: false,
         }
@@ -2560,6 +2568,12 @@ fn resolve_vision_config(vision: Option<&VisionToml>) -> VisionConfig {
             .filter(|value| !value.trim().is_empty())
             .unwrap_or(defaults.api_key_env),
         cache: vision.cache.unwrap_or(defaults.cache),
+        cache_dir: vision.cache_dir.clone().or(defaults.cache_dir),
+        cache_max_entries: vision
+            .cache_max_entries
+            .unwrap_or(defaults.cache_max_entries),
+        cache_max_bytes: vision.cache_max_bytes.unwrap_or(defaults.cache_max_bytes),
+        cache_ttl_seconds: vision.cache_ttl_seconds.or(defaults.cache_ttl_seconds),
         timeout_ms: vision.timeout_ms.unwrap_or(defaults.timeout_ms),
         send_original_images_to_main_model: vision
             .send_original_images_to_main_model

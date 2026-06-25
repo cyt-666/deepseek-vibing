@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
@@ -265,12 +267,12 @@ async fn observe_prepared_image(
 ) -> ImageObservation {
     let config = &turn.config.vision;
     let cache_key = cache_key(config, &prepared.image_id, detail, task_hint);
-    let cache_path = turn
-        .config
-        .deepseek_vibing_home
-        .as_path()
-        .join("vision-cache")
-        .join(format!("{cache_key}.json"));
+    let cache_dir = vision_cache_dir(turn);
+    let cache_path = cache_dir.join(format!("{cache_key}.json"));
+
+    if config.cache {
+        prune_vision_cache(config, &cache_dir).await;
+    }
 
     if config.cache
         && let Ok(bytes) = fs::read(&cache_path).await
@@ -319,10 +321,110 @@ async fn observe_prepared_image(
                 "failed to write vision cache {}: {err}",
                 cache_path.display()
             );
+        } else {
+            prune_vision_cache(config, &cache_dir).await;
         }
     }
 
     observation
+}
+
+fn vision_cache_dir(turn: &TurnContext) -> PathBuf {
+    turn.config
+        .vision
+        .cache_dir
+        .as_ref()
+        .map(|path| path.to_path_buf())
+        .unwrap_or_else(|| {
+            turn.config
+                .deepseek_vibing_home
+                .as_path()
+                .join("vision-cache")
+        })
+}
+
+#[derive(Debug)]
+struct VisionCacheEntry {
+    path: PathBuf,
+    modified: SystemTime,
+    size_bytes: u64,
+}
+
+async fn prune_vision_cache(config: &VisionConfig, cache_dir: &Path) {
+    if !config.cache {
+        return;
+    }
+
+    let mut read_dir = match fs::read_dir(cache_dir).await {
+        Ok(read_dir) => read_dir,
+        Err(err) => {
+            if err.kind() != std::io::ErrorKind::NotFound {
+                debug!(
+                    "failed to read vision cache dir {}: {err}",
+                    cache_dir.display()
+                );
+            }
+            return;
+        }
+    };
+
+    let now = SystemTime::now();
+    let ttl = config.cache_ttl_seconds.map(Duration::from_secs);
+    let mut entries = Vec::new();
+    let mut total_bytes = 0_u64;
+
+    loop {
+        let entry = match read_dir.next_entry().await {
+            Ok(Some(entry)) => entry,
+            Ok(None) => break,
+            Err(err) => {
+                debug!(
+                    "failed to iterate vision cache dir {}: {err}",
+                    cache_dir.display()
+                );
+                break;
+            }
+        };
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        let metadata = match entry.metadata().await {
+            Ok(metadata) if metadata.is_file() => metadata,
+            Ok(_) => continue,
+            Err(err) => {
+                debug!("failed to stat vision cache {}: {err}", path.display());
+                continue;
+            }
+        };
+        let modified = metadata.modified().unwrap_or(UNIX_EPOCH);
+        if let Some(ttl) = ttl
+            && now.duration_since(modified).unwrap_or_default() > ttl
+        {
+            remove_vision_cache_file(&path).await;
+            continue;
+        }
+        let size_bytes = metadata.len();
+        total_bytes = total_bytes.saturating_add(size_bytes);
+        entries.push(VisionCacheEntry {
+            path,
+            modified,
+            size_bytes,
+        });
+    }
+
+    entries.sort_by_key(|entry| entry.modified);
+    while entries.len() > config.cache_max_entries || total_bytes > config.cache_max_bytes {
+        let entry = entries.remove(0);
+        total_bytes = total_bytes.saturating_sub(entry.size_bytes);
+        remove_vision_cache_file(&entry.path).await;
+    }
+}
+
+async fn remove_vision_cache_file(path: &Path) {
+    if let Err(err) = fs::remove_file(path).await {
+        debug!("failed to remove vision cache {}: {err}", path.display());
+    }
 }
 
 async fn prepare_local_image(
@@ -732,7 +834,9 @@ fn sha256_hex(bytes: &[u8]) -> String {
 mod tests {
     use super::*;
     use deepseek_vibing_protocol::user_input::UserInput;
+    use deepseek_vibing_utils_absolute_path::AbsolutePathBuf;
     use std::sync::Arc;
+    use tempfile::tempdir;
 
     #[test]
     fn parses_json_observation_content() {
@@ -845,6 +949,88 @@ mod tests {
             cache_key(&base, "image", None, Some("read text")),
             cache_key(&other_model, "image", None, Some("read text"))
         );
+    }
+
+    #[tokio::test]
+    async fn observe_prepared_image_reads_configured_cache_dir() {
+        let (_session, mut turn) = crate::session::tests::make_session_and_context().await;
+        let cache_dir = tempdir().expect("cache dir");
+        let cache_dir_abs =
+            AbsolutePathBuf::from_absolute_path(cache_dir.path()).expect("absolute cache dir");
+        {
+            let config = &mut Arc::make_mut(&mut turn.config).vision;
+            config.cache_dir = Some(cache_dir_abs);
+            config.api_key_env = "DEEPSEEK_VIBING_TEST_VISION_CACHE_MISSING".to_string();
+        }
+
+        let prepared = prepare_image_url("data:image/png;base64,Zm9v").expect("valid data URL");
+        let cache_path = cache_dir.path().join(format!(
+            "{}.json",
+            cache_key(
+                &turn.config.vision,
+                &prepared.image_id,
+                None,
+                Some("cache hit")
+            )
+        ));
+        let cached = ImageObservation {
+            ok: true,
+            image_id: prepared.image_id.clone(),
+            source: prepared.source.clone(),
+            summary: "cached observation".to_string(),
+            visible_text: vec!["cached text".to_string()],
+            ui_elements: Vec::new(),
+            important_details: Vec::new(),
+            uncertain_details: Vec::new(),
+            cached: false,
+            kind: None,
+            message: None,
+            provider: Some(turn.config.vision.provider.clone()),
+            model: Some(turn.config.vision.model.clone()),
+            mime_type: Some("image/png".to_string()),
+            artifact_path: None,
+        };
+        fs::write(
+            &cache_path,
+            serde_json::to_vec(&cached).expect("cached observation json"),
+        )
+        .await
+        .expect("write cache");
+
+        let observed = observe_prepared_image(&turn, prepared, None, Some("cache hit")).await;
+
+        assert!(observed.cached);
+        assert_eq!(observed.summary, "cached observation");
+        assert_eq!(observed.visible_text, vec!["cached text"]);
+    }
+
+    #[tokio::test]
+    async fn prune_vision_cache_limits_json_entries_only() {
+        let cache_dir = tempdir().expect("cache dir");
+        let json_a = cache_dir.path().join("a.json");
+        let json_b = cache_dir.path().join("b.json");
+        let text_file = cache_dir.path().join("notes.txt");
+        fs::write(&json_a, b"{}").await.expect("write a");
+        fs::write(&json_b, b"{}").await.expect("write b");
+        fs::write(&text_file, b"keep me").await.expect("write txt");
+        let config = VisionConfig {
+            cache_max_entries: 1,
+            ..VisionConfig::default()
+        };
+
+        prune_vision_cache(&config, cache_dir.path()).await;
+
+        let mut read_dir = fs::read_dir(cache_dir.path())
+            .await
+            .expect("read cache dir");
+        let mut json_count = 0;
+        while let Some(entry) = read_dir.next_entry().await.expect("cache entry") {
+            if entry.path().extension().and_then(|ext| ext.to_str()) == Some("json") {
+                json_count += 1;
+            }
+        }
+        assert_eq!(json_count, 1);
+        assert!(text_file.exists());
     }
 
     #[tokio::test]
