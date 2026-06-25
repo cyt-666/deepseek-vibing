@@ -58,21 +58,17 @@ pub fn create_read_file_tool(options: ReadFileToolOptions) -> ToolSpec {
         (
             "path".to_string(),
             JsonSchema::string(Some(
-                "Path to the text file to read, relative to the current environment cwd unless absolute."
-                    .to_string(),
+                "Text file path, relative to the environment cwd unless absolute.".to_string(),
             )),
         ),
         (
             "start_line".to_string(),
-            JsonSchema::integer(Some(
-                "1-based line number to start reading from. Defaults to 1.".to_string(),
-            )),
+            JsonSchema::integer(Some("1-based start line. Defaults to 1.".to_string())),
         ),
         (
             "limit".to_string(),
             JsonSchema::integer(Some(
-                "Maximum number of lines to return. Defaults to 200 and must be between 1 and 1000."
-                    .to_string(),
+                "Lines to return, 1..=1000. Defaults to 200.".to_string(),
             )),
         ),
     ]);
@@ -80,16 +76,14 @@ pub fn create_read_file_tool(options: ReadFileToolOptions) -> ToolSpec {
         properties.insert(
             "environment_id".to_string(),
             JsonSchema::string(Some(
-                "Environment id from <environment_context>. Omit to use the primary environment."
-                    .to_string(),
+                "Environment id. Omit for the primary environment.".to_string(),
             )),
         );
     }
 
     ToolSpec::Function(ResponsesApiTool {
         name: READ_FILE_TOOL_NAME.to_string(),
-        description: "Read a UTF-8 text file from the workspace using the current filesystem sandbox. Prefer this over shell commands such as `cat` when inspecting files."
-            .to_string(),
+        description: "Read a UTF-8 workspace text file under the active sandbox.".to_string(),
         strict: false,
         defer_loading: None,
         parameters: JsonSchema::object(

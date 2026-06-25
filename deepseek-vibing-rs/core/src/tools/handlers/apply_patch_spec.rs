@@ -34,7 +34,7 @@ pub fn create_apply_patch_function_tool(include_environment_id: bool) -> ToolSpe
     let mut properties = BTreeMap::from([(
         "patch".to_string(),
         JsonSchema::string(Some(
-            "Complete apply_patch text, including `*** Begin Patch` and `*** End Patch`."
+            "Complete apply_patch text, not git/unified diff; include `*** Begin Patch` and `*** End Patch`."
                 .to_string(),
         )),
     )]);
@@ -42,16 +42,14 @@ pub fn create_apply_patch_function_tool(include_environment_id: bool) -> ToolSpe
         properties.insert(
             "environment_id".to_string(),
             JsonSchema::string(Some(
-                "Environment id from <environment_context>. Omit to use the primary environment."
-                    .to_string(),
+                "Environment id. Omit for the primary environment.".to_string(),
             )),
         );
     }
 
     ToolSpec::Function(ResponsesApiTool {
         name: "apply_patch".to_string(),
-        description: "Edit files by applying a structured patch. Pass the complete patch in the `patch` string argument; do not include `*** Environment ID:` inside the patch."
-            .to_string(),
+        description: "Edit files with a complete DeepSeek Vibing apply_patch string.".to_string(),
         strict: false,
         defer_loading: None,
         parameters: JsonSchema::object(

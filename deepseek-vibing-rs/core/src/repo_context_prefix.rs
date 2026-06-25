@@ -69,6 +69,11 @@ const SOURCE_EXTENSIONS: &[&str] = &[
     "cc", "cpp", "cxx", "h", "hpp",
 ];
 
+const MANIFEST_ANCHOR_BYTES: usize = 1_600;
+const DOCS_ANCHOR_BYTES: usize = 2_400;
+const SOURCE_ANCHOR_BYTES: usize = 600;
+const INCLUDED_ANCHOR_BYTES: usize = 1_000;
+
 static RUST_SYMBOL_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"^(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:fn|struct|enum|trait|mod|type|const|static)\s+([A-Za-z_][A-Za-z0-9_]*)",
@@ -294,7 +299,7 @@ fn read_file_block(
     let Ok(text) = std::str::from_utf8(&bytes) else {
         return Ok(None);
     };
-    let content_anchor = truncate_utf8_bytes(text.trim(), max_file_bytes);
+    let content_anchor = content_anchor(candidate.category, text, max_file_bytes);
     let exports = extract_exports(&candidate.rel_path, text);
     let summary = summarize_file(&candidate.rel_path, text, &exports);
 
@@ -421,6 +426,21 @@ fn summarize_file(path: &str, text: &str, exports: &[String]) -> String {
     format!("{path}: {}", truncate_utf8_bytes(first_line, 180))
 }
 
+fn content_anchor(category: RepoContextCategory, text: &str, max_file_bytes: usize) -> String {
+    let budget = match category {
+        RepoContextCategory::Manifest => MANIFEST_ANCHOR_BYTES,
+        RepoContextCategory::Docs => DOCS_ANCHOR_BYTES,
+        RepoContextCategory::Lock => 0,
+        RepoContextCategory::Source => SOURCE_ANCHOR_BYTES,
+        RepoContextCategory::Included => INCLUDED_ANCHOR_BYTES,
+    };
+    let budget = budget.min(max_file_bytes);
+    if budget == 0 {
+        return "omitted: metadata only".to_string();
+    }
+    truncate_utf8_bytes(text.trim(), budget)
+}
+
 fn truncate_utf8_bytes(text: &str, max_bytes: usize) -> String {
     if text.len() <= max_bytes {
         return text.to_string();
@@ -544,5 +564,42 @@ mod tests {
         assert_eq!(prefix.matches("<file ").count(), 1);
         assert!(prefix.contains("[truncated]"));
         assert!(prefix.contains("omitted_files"));
+    }
+
+    #[test]
+    fn context_prefix_defaults_are_balanced_for_prompt_cache() {
+        let config = DeepSeekContextPrefixConfig::default();
+
+        assert_eq!(config.max_bytes, 48_000);
+        assert_eq!(config.max_file_bytes, 6_000);
+        assert_eq!(config.max_files, 40);
+    }
+
+    #[test]
+    fn context_prefix_uses_map_style_source_and_lock_anchors() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        write(&temp.path().join("Cargo.lock"), &"lock-line\n".repeat(400));
+        write(
+            &temp.path().join("src/lib.rs"),
+            &format!("pub fn exported() {{}}\n{}", "source-line\n".repeat(400)),
+        );
+
+        let config = DeepSeekContextPrefixConfig {
+            max_bytes: 20_000,
+            max_file_bytes: 6_000,
+            max_files: 10,
+            ..DeepSeekContextPrefixConfig::default()
+        };
+        let prefix = build_repo_context_prefix(temp.path(), &config).expect("prefix");
+
+        assert!(prefix.contains("path=\"Cargo.lock\""));
+        assert!(prefix.contains("content_anchor:\nomitted: metadata only"));
+        assert!(prefix.contains("path=\"src/lib.rs\""));
+        assert!(prefix.contains("exports=\"exported\""));
+        assert!(prefix.contains("[truncated]"));
+        assert!(
+            prefix.matches("source-line").count() < 80,
+            "source anchor should be a short map entry, not a large source dump"
+        );
     }
 }

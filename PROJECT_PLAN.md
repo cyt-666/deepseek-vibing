@@ -270,7 +270,7 @@ Patch + Tests + Review Summary
 实施状态（2026-06-04）：
 
 - 已开始：新增 DeepSeek stable repo prefix 的确定性 MVP，不做持久 repo index、不做模型生成摘要、不做跨进程 prefix 缓存。
-- 已开始：repo prefix 仅在 `deepseek` / `deepseek-beta` provider 且 `[deepseek.context_prefix] enabled = true` 时注入 full initial context；默认上限为 `max_bytes = 160000`、`max_file_bytes = 20000`、`max_files = 80`。
+- 已完成：repo prefix 仅在 `deepseek` / `deepseek-beta` provider 且 `[deepseek.context_prefix] enabled = true` 时注入 full initial context；默认上限已按 token/cost 均衡收口为 `max_bytes = 48000`、`max_file_bytes = 6000`、`max_files = 40`。
 - 已开始：prefix 文件块包含 path、sha256、size、exports、summary 和 content anchor；默认排除 `.git`、`target*`、`node_modules`、`.pnpm-store`、`dist`、`build`、`out`、`.cache` 等生成目录，并支持 include/exclude glob 覆盖。
 - 已保留：最新任务、tool output、apply_patch diff 和失败测试仍走动态 suffix/history；本阶段不重构 suffix packing。
 - 已记录：DeepSeek `prompt_cache_hit_tokens` 继续映射到 `cached_input_tokens`，cache miss 使用现有 `TokenUsage::non_cached_input()` 派生，不新增公共协议字段。

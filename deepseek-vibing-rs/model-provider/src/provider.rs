@@ -13,7 +13,6 @@ use deepseek_vibing_models_manager::manager::OpenAiModelsManager;
 use deepseek_vibing_models_manager::manager::SharedModelsManager;
 use deepseek_vibing_models_manager::manager::StaticModelsManager;
 use deepseek_vibing_protocol::account::ProviderAccount;
-use deepseek_vibing_protocol::models::BASE_INSTRUCTIONS_DEFAULT;
 use deepseek_vibing_protocol::openai_models::ModelInfo;
 use deepseek_vibing_protocol::openai_models::ModelsResponse;
 
@@ -326,6 +325,10 @@ fn deepseek_model_info(
         "priority": priority,
         "upgrade": null,
         "base_instructions": base_instructions,
+        "model_messages": {
+            "instructions_template": base_instructions,
+            "instructions_variables": null
+        },
         "supports_reasoning_summaries": false,
         "default_reasoning_summary": "none",
         "support_verbosity": false,
@@ -347,17 +350,22 @@ fn deepseek_model_info(
 }
 
 fn deepseek_base_instructions() -> String {
-    BASE_INSTRUCTIONS_DEFAULT
-        .lines()
-        .map(|line| {
-            if line.starts_with("- Use the `apply_patch` tool to edit files") {
-                "- Use the `apply_patch` function tool to edit files. Pass JSON arguments like {\"patch\":\"*** Begin Patch\\n*** Update File: path/to/file.py\\n@@\\n- old\\n+ new\\n*** End Patch\"}; in multi-environment sessions, pass `environment_id` as a separate JSON argument."
-            } else {
-                line
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+    r#"You are DeepSeek Vibing, a DeepSeek-powered coding agent. You and the user share one workspace, and your job is to help complete the user's coding task end to end.
+
+# Working Style
+- Read relevant code before changing it. Prefer precise local context over guessing from repo summaries.
+- Use `rg` or `rg --files` for search when available.
+- Keep edits focused, follow existing patterns, and never revert user changes unless explicitly asked.
+- Use `read_file` to inspect files. Use shell commands for search, builds, tests, and repository state.
+- Use the `apply_patch` function tool for manual edits. The `patch` string is DeepSeek Vibing apply_patch format, not git/unified diff: `*** Begin Patch`, then `*** Update File: path`, `@@`, old/new lines prefixed with `-`/`+`, then `*** End Patch`. Hunks cannot be empty. In multi-environment sessions, pass `environment_id` separately.
+- Run focused tests or checks when useful, and report any verification you could not run.
+- If image input is present, rely on Vision Bridge observation text; DeepSeek does not receive raw images.
+
+# Safety
+- Respect sandbox and approval policies.
+- Do not expose API keys or secrets in logs, trajectory, or replies.
+- Do not persist raw reasoning content; keep reasoning private and summarize outcomes only."#
+        .to_string()
 }
 
 #[cfg(test)]
@@ -490,6 +498,36 @@ mod tests {
 
         assert_eq!(models[0].model, DEEPSEEK_DEFAULT_MODEL_ID);
         assert_eq!(models[1].model, DEEPSEEK_PRO_MODEL_ID);
+    }
+
+    #[tokio::test]
+    async fn deepseek_static_models_use_concise_tool_instructions() {
+        let provider = create_model_provider(
+            ModelProviderInfo::create_deepseek_provider(/*base_url*/ None),
+            /*auth_manager*/ None,
+        );
+        let models = provider
+            .models_manager(
+                test_deepseek_vibing_home(),
+                /*config_model_catalog*/ None,
+            )
+            .raw_model_catalog(RefreshStrategy::Offline)
+            .await;
+        let instructions = &models.models[0].base_instructions;
+
+        assert!(instructions.contains("Use `read_file` to inspect files"));
+        assert!(instructions.contains("Use the `apply_patch` function tool"));
+        assert!(instructions.contains("not git/unified diff"));
+        assert!(!instructions.contains("FREEFORM"));
+        assert!(!instructions.contains("Lark"));
+        assert!(!instructions.contains("Frontend guidance"));
+        assert_eq!(
+            models.models[0]
+                .model_messages
+                .as_ref()
+                .and_then(|messages| messages.instructions_template.as_deref()),
+            Some(instructions.as_str())
+        );
     }
 
     #[test]

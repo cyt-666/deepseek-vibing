@@ -16,19 +16,17 @@ pub fn create_describe_image_tool(options: DescribeImageToolOptions) -> ToolSpec
     let mut properties = BTreeMap::from([
         (
             "path".to_string(),
-            JsonSchema::string(Some("Local filesystem path to an image file.".to_string())),
+            JsonSchema::string(Some("Local image path.".to_string())),
         ),
         (
             "task_hint".to_string(),
-            JsonSchema::string(Some(
-                "Optional instruction describing what to look for in the image.".to_string(),
-            )),
+            JsonSchema::string(Some("Optional focus for the observation.".to_string())),
         ),
         (
             "detail".to_string(),
             JsonSchema::string_enum(
                 vec![json!("auto"), json!("low"), json!("high")],
-                Some("Vision detail hint. Defaults to `auto`.".to_string()),
+                Some("Detail hint. Defaults to `auto`.".to_string()),
             ),
         ),
     ]);
@@ -36,19 +34,22 @@ pub fn create_describe_image_tool(options: DescribeImageToolOptions) -> ToolSpec
         properties.insert(
             "environment_id".to_string(),
             JsonSchema::string(Some(
-                "Environment id from <environment_context>. Omit to use the primary environment."
-                    .to_string(),
+                "Environment id. Omit for the primary environment.".to_string(),
             )),
         );
     }
 
     ToolSpec::Function(ResponsesApiTool {
         name: DESCRIBE_IMAGE_TOOL_NAME.to_string(),
-        description: "Describe a local image for DeepSeek by routing it through the configured Vision Bridge. Returns structured JSON text; the main model never receives the raw image."
+        description: "Describe a local image through Vision Bridge; returns JSON text only."
             .to_string(),
         strict: false,
         defer_loading: None,
-        parameters: JsonSchema::object(properties, Some(vec!["path".to_string()]), Some(false.into())),
+        parameters: JsonSchema::object(
+            properties,
+            Some(vec!["path".to_string()]),
+            Some(false.into()),
+        ),
         output_schema: Some(describe_image_output_schema()),
     })
 }

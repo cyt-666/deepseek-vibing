@@ -60,7 +60,7 @@
 - 旧 live smoke 中曾出现 `chatgpt.com/backend-api/plugins/featured` 的 401 warning。本轮已切断 DeepSeek 默认会话的 featured plugin ids 预热路径，最新 P0 live smoke 未再出现该 warning。
 - 旧 P0 live smoke 中，模型曾尝试直接调用 `apply_patch` tool 并收到 `unsupported call: apply_patch`，随后通过 shell patch 完成任务。本批已通过 DeepSeek JSON function `apply_patch` 收口；最新 live smoke 未再出现该 warning。
 - 旧 P1 live smoke 中，模型曾尝试过 `read` 这个未注册工具名并收到 `unsupported call: read`。本批已通过 DeepSeek `read_file` function 和 hidden `read` alias 收口，并建立轻量测试基线；最新 live smoke 已通过，未再出现该 warning。
-- stable smoke 的输入 token 较高，虽然 prompt cache 命中正常，但 repo context prefix、base instructions 和默认上下文注入仍需要继续优化。
+- stable smoke 的输入 token 较高问题已完成本批收口：DeepSeek repo context prefix 默认预算从 `160KB / 80 files` 降到 `48KB / 40 files`，source/lock anchor 改为项目地图式摘要，DeepSeek 静态 base instructions 改为短版专用提示；复验两次 stable input tokens 分别为 `31477` 和 `39845`，均明显低于优化前 `74739`，non-cached input 从优化前 `8947` 降到 `8437` / `8101`。
 - Vision Bridge 已完成单元测试、隐私测试和真实 E2E smoke；`scripts/deepseek-vision-live-smoke.sh` 使用真实视觉 provider 将红色 PNG 转成 observation，DeepSeek 正确回答 dominant color 为 red，trajectory 检查未发现 raw image/base64/raw reasoning marker。
 - FIM CLI/core 已完成单元测试、CLI 测试和真实 DeepSeek `/beta/completions` live smoke；`scripts/deepseek-fim-live-smoke.sh` 返回 `deepseek-v4-pro` 补全文本 `    +`，usage/cache 字段正常，未发现 API key 泄露。
 

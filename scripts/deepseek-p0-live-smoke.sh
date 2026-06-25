@@ -19,6 +19,8 @@ if ! grep -Eq '^[[:space:]]*deepseek_api_key[[:space:]]*=[[:space:]]*"[^"]+"' "$
   exit 2
 fi
 
+DEEPSEEK_API_KEY_FROM_CONFIG="$(sed -nE 's/^[[:space:]]*deepseek_api_key[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$CONFIG_FILE" | head -n 1)"
+
 if command -v stat >/dev/null 2>&1; then
   mode="$(stat -f '%Lp' "$CONFIG_FILE" 2>/dev/null || stat -c '%a' "$CONFIG_FILE" 2>/dev/null || true)"
   if [[ -n "$mode" && "$mode" != "600" ]]; then
@@ -105,6 +107,11 @@ fi
 
 if grep -Eq 'ReasoningRawContentDelta|AgentReasoningRawContent|reasoning_content' "$TRAJECTORY_FILE"; then
   echo "Trajectory appears to contain raw reasoning markers: $TRAJECTORY_FILE" >&2
+  exit 1
+fi
+
+if [[ -n "$DEEPSEEK_API_KEY_FROM_CONFIG" ]] && grep -Fq -- "$DEEPSEEK_API_KEY_FROM_CONFIG" "$TRAJECTORY_FILE"; then
+  echo "Trajectory appears to contain the configured DeepSeek API key: $TRAJECTORY_FILE" >&2
   exit 1
 fi
 

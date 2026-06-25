@@ -1153,9 +1153,9 @@ impl Default for DeepSeekContextPrefixConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            max_bytes: 160_000,
-            max_file_bytes: 20_000,
-            max_files: 80,
+            max_bytes: 48_000,
+            max_file_bytes: 6_000,
+            max_files: 40,
             include: Vec::new(),
             exclude: Vec::new(),
         }
