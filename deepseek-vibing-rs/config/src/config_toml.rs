@@ -124,6 +124,9 @@ pub struct DeepSeekFimToml {
     pub base_url: Option<String>,
     pub api_key_env: Option<String>,
     pub max_tokens: Option<u16>,
+    pub max_prefix_bytes: Option<usize>,
+    pub max_suffix_bytes: Option<usize>,
+    pub debounce_ms: Option<u64>,
     pub timeout_ms: Option<u64>,
     pub temperature: Option<f32>,
 }

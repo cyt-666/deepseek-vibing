@@ -303,16 +303,16 @@
 工作内容：
 
 - 使用真实 DeepSeek `/beta/completions` 跑一次 `deepseek-vibing fim` live smoke，确认 `[auth].deepseek_api_key`、usage/cache 字段和错误脱敏路径。（已完成：`scripts/deepseek-fim-live-smoke.sh` 通过）
-- 设计 FIM LSP 或轻量补全服务边界。
-- 定义 prefix/suffix 截断策略和 token budget。
-- 增加缓存、去重和 debounce 策略。
-- 评估是否需要 streaming FIM。
+- 设计 FIM LSP 或轻量补全服务边界。（已完成第一批：`deepseek-vibing fim-server` 本地 HTTP JSON 服务）
+- 定义 prefix/suffix 截断策略和 token budget。（已完成第一批：`max_prefix_bytes` / `max_suffix_bytes`，UTF-8 边界安全截断）
+- 增加缓存、去重和 debounce 策略。（已完成第一批：server 进程内 completion cache、同 key 并发合并、`debounce_ms`）
+- 评估是否需要 streaming FIM。（后续保留）
 - 保持 FIM 与主 agent loop 解耦。
 
 验收标准：
 
 - `deepseek-vibing fim` 仍保持稳定。
-- IDE 预留接口不改变主 agent turn 行为。
+- IDE 预留接口不改变主 agent turn 行为。（已完成：`fim-server` 独立于主 agent loop）
 - FIM 输出不自动 apply，仍由调用方决定如何使用。
 
 ### P2：Eval 与质量门槛增强

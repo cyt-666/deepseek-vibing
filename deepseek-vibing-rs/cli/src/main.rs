@@ -1,3 +1,8 @@
+use axum::Json;
+use axum::Router;
+use axum::extract::State as AxumState;
+use axum::http::StatusCode;
+use axum::routing::post;
 use clap::Args;
 use clap::CommandFactory;
 use clap::Parser;
@@ -26,14 +31,20 @@ use deepseek_vibing_utils_cli::ProfileV2Name;
 use deepseek_vibing_utils_cli::SharedCliOptions;
 use deepseek_vibing_utils_cli::resume_hint;
 use owo_colors::OwoColorize;
+use std::collections::HashMap;
 use std::io::IsTerminal;
 use std::io::Read;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use supports_color::Stream;
+use tokio::net::TcpListener;
 use tokio::process::Command as TokioCommand;
+use tokio::sync::Mutex;
+use tokio::sync::oneshot;
 use tokio::time::Duration;
 use tokio::time::Instant;
 
@@ -73,6 +84,7 @@ use deepseek_vibing_core::config::EvalMode;
 use deepseek_vibing_core::config::edit::ConfigEditsBuilder;
 use deepseek_vibing_core::config::find_deepseek_vibing_home;
 use deepseek_vibing_core::config::resolve_profile_v2_config_path;
+use deepseek_vibing_core::deepseek_fim::FimCompletionError;
 use deepseek_vibing_core::deepseek_fim::FimCompletionOutput;
 use deepseek_vibing_core::deepseek_fim::FimCompletionRequest;
 use deepseek_vibing_core::deepseek_fim::complete_fim_with_auth;
@@ -174,6 +186,9 @@ enum Subcommand {
     /// Fill in code between a prefix and optional suffix using DeepSeek FIM.
     Fim(FimCommand),
 
+    /// Run a local HTTP FIM completion service for editor integrations.
+    FimServer(FimServerCommand),
+
     /// Inspect DeepSeek Vibing trajectory summaries.
     Trajectory(TrajectoryCommand),
 
@@ -261,6 +276,20 @@ struct FimCommand {
     /// Print structured JSON instead of only the completion text.
     #[arg(long = "json", default_value_t = false)]
     json: bool,
+
+    #[clap(skip)]
+    config_overrides: CliConfigOverrides,
+}
+
+#[derive(Debug, Parser)]
+struct FimServerCommand {
+    /// Host interface to bind.
+    #[arg(long = "host", default_value = "127.0.0.1")]
+    host: String,
+
+    /// Port to bind. Use 0 to let the OS choose a free port.
+    #[arg(long = "port", default_value_t = 0)]
+    port: u16,
 
     #[clap(skip)]
     config_overrides: CliConfigOverrides,
@@ -1439,6 +1468,18 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
             prepend_config_flags(&mut fim_cli.config_overrides, root_config_overrides.clone());
             run_fim_command(fim_cli).await?;
         }
+        Some(Subcommand::FimServer(mut fim_server_cli)) => {
+            reject_remote_mode_for_subcommand(
+                root_remote.as_deref(),
+                root_remote_auth_token_env.as_deref(),
+                "fim-server",
+            )?;
+            prepend_config_flags(
+                &mut fim_server_cli.config_overrides,
+                root_config_overrides.clone(),
+            );
+            run_fim_server_command(fim_server_cli).await?;
+        }
         Some(Subcommand::Trajectory(mut trajectory_cli)) => {
             reject_remote_mode_for_subcommand(
                 root_remote.as_deref(),
@@ -1704,6 +1745,7 @@ fn profile_v2_for_subcommand<'a>(
         Subcommand::Exec(_)
         | Subcommand::Review(_)
         | Subcommand::Fim(_)
+        | Subcommand::FimServer(_)
         | Subcommand::Trajectory(_)
         | Subcommand::Eval(_)
         | Subcommand::Resume(_)
@@ -1716,7 +1758,7 @@ fn profile_v2_for_subcommand<'a>(
             subcommand: DebugSubcommand::PromptInput(_),
         }) => Ok(Some(profile_v2)),
         _ => anyhow::bail!(
-            "--profile only applies to runtime commands and `deepseek-vibing mcp`: `deepseek-vibing`, `deepseek-vibing exec`, `deepseek-vibing review`, `deepseek-vibing fim`, `deepseek-vibing trajectory`, `deepseek-vibing eval`, `deepseek-vibing resume`, `deepseek-vibing archive`, `deepseek-vibing unarchive`, `deepseek-vibing fork`, `deepseek-vibing mcp`, `deepseek-vibing sandbox`, and `deepseek-vibing debug prompt-input`."
+            "--profile only applies to runtime commands and `deepseek-vibing mcp`: `deepseek-vibing`, `deepseek-vibing exec`, `deepseek-vibing review`, `deepseek-vibing fim`, `deepseek-vibing fim-server`, `deepseek-vibing trajectory`, `deepseek-vibing eval`, `deepseek-vibing resume`, `deepseek-vibing archive`, `deepseek-vibing unarchive`, `deepseek-vibing fork`, `deepseek-vibing mcp`, `deepseek-vibing sandbox`, and `deepseek-vibing debug prompt-input`."
         ),
     }
 }
@@ -2141,6 +2183,7 @@ fn unsupported_subcommand_name_for_strict_config(
         | Some(Subcommand::Exec(_))
         | Some(Subcommand::Review(_))
         | Some(Subcommand::Fim(_))
+        | Some(Subcommand::FimServer(_))
         | Some(Subcommand::Trajectory(_))
         | Some(Subcommand::Eval(_))
         | Some(Subcommand::McpServer(_))
@@ -2565,6 +2608,388 @@ async fn run_fim_command(command: FimCommand) -> anyhow::Result<()> {
     let rendered = render_fim_output(&output, json)?;
     print!("{rendered}");
     Ok(())
+}
+
+async fn run_fim_server_command(command: FimServerCommand) -> anyhow::Result<()> {
+    let cli_overrides = command
+        .config_overrides
+        .clone()
+        .parse_overrides()
+        .map_err(anyhow::Error::msg)?;
+    let config = Config::load_with_cli_overrides(cli_overrides).await?;
+    let listener = TcpListener::bind(format!("{}:{}", command.host, command.port)).await?;
+    let local_addr = listener.local_addr()?;
+    let state = Arc::new(FimServerState {
+        fim_config: config.deepseek.fim.clone(),
+        deepseek_api_key: config.auth.deepseek_api_key().map(str::to_string),
+        cache: Mutex::new(HashMap::new()),
+    });
+    let app = Router::new()
+        .route("/complete", post(fim_server_complete))
+        .with_state(state);
+
+    let started = FimServerStarted {
+        host: local_addr.ip().to_string(),
+        port: local_addr.port(),
+    };
+    println!("{}", serde_json::to_string(&started)?);
+    std::io::stdout().flush()?;
+
+    axum::serve(listener, app).await?;
+    Ok(())
+}
+
+struct FimServerState {
+    fim_config: deepseek_vibing_core::config::DeepSeekFimConfig,
+    deepseek_api_key: Option<String>,
+    cache: Mutex<HashMap<FimServerCacheKey, FimServerCacheEntry>>,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct FimServerStarted {
+    host: String,
+    port: u16,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct FimServerCompleteRequest {
+    prefix: String,
+    #[serde(default)]
+    suffix: Option<String>,
+    #[serde(default)]
+    file_path: Option<PathBuf>,
+    #[serde(default)]
+    max_tokens: Option<u16>,
+    #[serde(default)]
+    temperature: Option<f32>,
+    #[serde(default)]
+    request_id: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+struct FimServerCompleteResponse {
+    ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    request_id: Option<String>,
+    cached: bool,
+    coalesced: bool,
+    truncated: FimServerTruncation,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    file_path: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    finish_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<deepseek_vibing_core::deepseek_fim::FimUsage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<FimServerErrorResponse>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+struct FimServerErrorResponse {
+    kind: String,
+    message: String,
+}
+
+#[derive(Debug, Clone, Copy, Default, serde::Serialize)]
+struct FimServerTruncation {
+    prefix_bytes_removed: usize,
+    suffix_bytes_removed: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct FimServerCacheKey {
+    model: String,
+    prefix: String,
+    suffix: Option<String>,
+    max_tokens: u16,
+    temperature_bits: u32,
+}
+
+enum FimServerCacheEntry {
+    Completed(FimServerCompleteResponse),
+    InFlight(Vec<oneshot::Sender<Result<FimServerCompleteResponse, String>>>),
+}
+
+enum FimServerRegistration {
+    Owner,
+    Cached(FimServerCompleteResponse),
+    Waiting(oneshot::Receiver<Result<FimServerCompleteResponse, String>>),
+}
+
+async fn fim_server_complete(
+    AxumState(state): AxumState<Arc<FimServerState>>,
+    Json(request): Json<FimServerCompleteRequest>,
+) -> (StatusCode, Json<FimServerCompleteResponse>) {
+    match run_fim_server_complete(state, request).await {
+        Ok(response) => (StatusCode::OK, Json(response)),
+        Err((status, response)) => (status, Json(response)),
+    }
+}
+
+async fn run_fim_server_complete(
+    state: Arc<FimServerState>,
+    request: FimServerCompleteRequest,
+) -> Result<FimServerCompleteResponse, (StatusCode, FimServerCompleteResponse)> {
+    let max_tokens = request.max_tokens.unwrap_or(state.fim_config.max_tokens);
+    if let Err(err) = validate_fim_max_tokens_value(max_tokens) {
+        return Err(fim_server_error_response(
+            StatusCode::BAD_REQUEST,
+            request.request_id,
+            request.file_path,
+            FimServerTruncation::default(),
+            "invalid_request",
+            err.to_string(),
+            false,
+        ));
+    }
+    let temperature = request.temperature.unwrap_or(state.fim_config.temperature);
+    let (prefix, suffix, truncated) = truncate_fim_server_context(
+        request.prefix,
+        request.suffix,
+        state.fim_config.max_prefix_bytes,
+        state.fim_config.max_suffix_bytes,
+    );
+    let key = FimServerCacheKey {
+        model: state.fim_config.model.clone(),
+        prefix: prefix.clone(),
+        suffix: suffix.clone(),
+        max_tokens,
+        temperature_bits: temperature.to_bits(),
+    };
+
+    match register_fim_server_request(&state, &key).await {
+        FimServerRegistration::Owner => {}
+        FimServerRegistration::Cached(mut response) => {
+            response.request_id = request.request_id;
+            response.file_path = request.file_path;
+            response.truncated = truncated;
+            return Ok(response);
+        }
+        FimServerRegistration::Waiting(waiter) => {
+            return match waiter.await {
+                Ok(Ok(mut response)) => {
+                    response.coalesced = true;
+                    response.request_id = request.request_id;
+                    response.file_path = request.file_path;
+                    response.truncated = truncated;
+                    Ok(response)
+                }
+                Ok(Err(message)) => Err(fim_server_error_response(
+                    StatusCode::BAD_GATEWAY,
+                    request.request_id,
+                    request.file_path,
+                    truncated,
+                    "provider_error",
+                    message,
+                    true,
+                )),
+                Err(_) => Err(fim_server_error_response(
+                    StatusCode::BAD_GATEWAY,
+                    request.request_id,
+                    request.file_path,
+                    truncated,
+                    "provider_error",
+                    "coalesced FIM request was dropped".to_string(),
+                    true,
+                )),
+            };
+        }
+    }
+
+    if state.fim_config.debounce_ms > 0 {
+        tokio::time::sleep(Duration::from_millis(state.fim_config.debounce_ms)).await;
+    }
+
+    let fim_request = FimCompletionRequest {
+        prefix,
+        suffix,
+        model: state.fim_config.model.clone(),
+        max_tokens,
+        temperature,
+        stop: None,
+    };
+    let result = complete_fim_with_auth(
+        &state.fim_config,
+        state.deepseek_api_key.as_deref(),
+        fim_request,
+    )
+    .await
+    .map(|output| FimServerCompleteResponse {
+        ok: true,
+        request_id: request.request_id.clone(),
+        cached: false,
+        coalesced: false,
+        truncated,
+        file_path: request.file_path.clone(),
+        text: Some(output.text),
+        model: Some(output.model),
+        finish_reason: output.finish_reason,
+        usage: output.usage,
+        error: None,
+    });
+
+    match result {
+        Ok(response) => {
+            finish_fim_server_request(&state, key, Ok(response.clone())).await;
+            Ok(response)
+        }
+        Err(err) => {
+            let (status, kind) = fim_server_error_status_and_kind(&err);
+            let message = err.to_string();
+            finish_fim_server_request(&state, key, Err(message.clone())).await;
+            Err(fim_server_error_response(
+                status,
+                request.request_id,
+                request.file_path,
+                truncated,
+                kind,
+                message,
+                false,
+            ))
+        }
+    }
+}
+
+async fn register_fim_server_request(
+    state: &FimServerState,
+    key: &FimServerCacheKey,
+) -> FimServerRegistration {
+    let mut cache = state.cache.lock().await;
+    match cache.get_mut(key) {
+        Some(FimServerCacheEntry::Completed(response)) => {
+            let mut cached = response.clone();
+            cached.cached = true;
+            FimServerRegistration::Cached(cached)
+        }
+        Some(FimServerCacheEntry::InFlight(waiters)) => {
+            let (sender, receiver) = oneshot::channel();
+            waiters.push(sender);
+            FimServerRegistration::Waiting(receiver)
+        }
+        None => {
+            cache.insert(key.clone(), FimServerCacheEntry::InFlight(Vec::new()));
+            FimServerRegistration::Owner
+        }
+    }
+}
+
+async fn finish_fim_server_request(
+    state: &FimServerState,
+    key: FimServerCacheKey,
+    result: Result<FimServerCompleteResponse, String>,
+) {
+    let mut cache = state.cache.lock().await;
+    let waiters = match cache.remove(&key) {
+        Some(FimServerCacheEntry::InFlight(waiters)) => waiters,
+        Some(FimServerCacheEntry::Completed(_)) | None => Vec::new(),
+    };
+    if let Ok(response) = result.as_ref() {
+        cache.insert(key, FimServerCacheEntry::Completed(response.clone()));
+    }
+    drop(cache);
+    for waiter in waiters {
+        let _ = waiter.send(result.clone());
+    }
+}
+
+fn fim_server_error_status_and_kind(err: &FimCompletionError) -> (StatusCode, &'static str) {
+    match err {
+        FimCompletionError::Disabled => (StatusCode::SERVICE_UNAVAILABLE, "disabled"),
+        FimCompletionError::MissingApiKey { .. } => (StatusCode::UNAUTHORIZED, "missing_api_key"),
+        FimCompletionError::InvalidMaxTokens { .. } => (StatusCode::BAD_REQUEST, "invalid_request"),
+        FimCompletionError::ProviderStatus { .. } => (StatusCode::BAD_GATEWAY, "provider_error"),
+        FimCompletionError::Request(_)
+        | FimCompletionError::ResponseRead(_)
+        | FimCompletionError::ResponseJson(_)
+        | FimCompletionError::EmptyChoices => (StatusCode::BAD_GATEWAY, "provider_error"),
+    }
+}
+
+fn fim_server_error_response(
+    status: StatusCode,
+    request_id: Option<String>,
+    file_path: Option<PathBuf>,
+    truncated: FimServerTruncation,
+    kind: impl Into<String>,
+    message: impl Into<String>,
+    coalesced: bool,
+) -> (StatusCode, FimServerCompleteResponse) {
+    (
+        status,
+        FimServerCompleteResponse {
+            ok: false,
+            request_id,
+            cached: false,
+            coalesced,
+            truncated,
+            file_path,
+            text: None,
+            model: None,
+            finish_reason: None,
+            usage: None,
+            error: Some(FimServerErrorResponse {
+                kind: kind.into(),
+                message: message.into(),
+            }),
+        },
+    )
+}
+
+fn truncate_fim_server_context(
+    prefix: String,
+    suffix: Option<String>,
+    max_prefix_bytes: usize,
+    max_suffix_bytes: usize,
+) -> (String, Option<String>, FimServerTruncation) {
+    let (prefix, prefix_bytes_removed) = truncate_utf8_tail(prefix, max_prefix_bytes);
+    let (suffix, suffix_bytes_removed) = suffix
+        .map(|suffix| truncate_utf8_head(suffix, max_suffix_bytes))
+        .map(|(suffix, removed)| (Some(suffix), removed))
+        .unwrap_or((None, 0));
+    (
+        prefix,
+        suffix,
+        FimServerTruncation {
+            prefix_bytes_removed,
+            suffix_bytes_removed,
+        },
+    )
+}
+
+fn truncate_utf8_tail(value: String, max_bytes: usize) -> (String, usize) {
+    if value.len() <= max_bytes {
+        return (value, 0);
+    }
+    if max_bytes == 0 {
+        let removed = value.len();
+        return (String::new(), removed);
+    }
+    let mut start = value.len().saturating_sub(max_bytes);
+    while start < value.len() && !value.is_char_boundary(start) {
+        start += 1;
+    }
+    let removed = start;
+    (value[start..].to_string(), removed)
+}
+
+fn truncate_utf8_head(value: String, max_bytes: usize) -> (String, usize) {
+    if value.len() <= max_bytes {
+        return (value, 0);
+    }
+    if max_bytes == 0 {
+        let removed = value.len();
+        return (String::new(), removed);
+    }
+    let mut end = max_bytes.min(value.len());
+    while end > 0 && !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    let removed = value.len().saturating_sub(end);
+    (value[..end].to_string(), removed)
 }
 
 async fn run_trajectory_command(command: TrajectoryCommand) -> anyhow::Result<()> {
@@ -3428,6 +3853,14 @@ mod tests {
         command
     }
 
+    fn fim_server_from_args(args: &[&str]) -> FimServerCommand {
+        let cli = MultitoolCli::try_parse_from(args).expect("parse");
+        let Some(Subcommand::FimServer(command)) = cli.subcommand else {
+            panic!("expected fim-server subcommand");
+        };
+        command
+    }
+
     fn trajectory_from_args(args: &[&str]) -> TrajectoryCommand {
         let cli = MultitoolCli::try_parse_from(args).expect("parse");
         let Some(Subcommand::Trajectory(command)) = cli.subcommand else {
@@ -3482,6 +3915,39 @@ mod tests {
         assert_eq!(command.max_tokens, Some(256));
         assert_eq!(command.temperature, Some(0.3));
         assert!(command.json);
+    }
+
+    #[test]
+    fn fim_server_parses_default_and_bind_overrides() {
+        let defaults = fim_server_from_args(&["deepseek-vibing", "fim-server"]);
+        assert_eq!(defaults.host, "127.0.0.1");
+        assert_eq!(defaults.port, 0);
+
+        let command = fim_server_from_args(&[
+            "deepseek-vibing",
+            "fim-server",
+            "--host",
+            "127.0.0.2",
+            "--port",
+            "34567",
+        ]);
+        assert_eq!(command.host, "127.0.0.2");
+        assert_eq!(command.port, 34567);
+    }
+
+    #[test]
+    fn fim_server_truncation_preserves_utf8_boundaries() {
+        let (prefix, suffix, truncated) = truncate_fim_server_context(
+            "abc中文def".to_string(),
+            Some("ghi中文jkl".to_string()),
+            8,
+            8,
+        );
+
+        assert_eq!(prefix, "文def");
+        assert_eq!(suffix, Some("ghi中".to_string()));
+        assert!(truncated.prefix_bytes_removed > 0);
+        assert!(truncated.suffix_bytes_removed > 0);
     }
 
     #[test]

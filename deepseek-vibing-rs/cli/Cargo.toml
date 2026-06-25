@@ -19,6 +19,11 @@ workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
+axum = { workspace = true, default-features = false, features = [
+    "http1",
+    "json",
+    "tokio",
+] }
 clap = { workspace = true, features = ["derive"] }
 clap_complete = { workspace = true }
 deepseek-vibing-app-server = { workspace = true }

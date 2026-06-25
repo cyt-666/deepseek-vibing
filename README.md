@@ -94,6 +94,19 @@ Run the DeepSeek FIM live smoke against `/beta/completions`:
 scripts/deepseek-fim-live-smoke.sh
 ```
 
+Run the local FIM server smoke:
+
+```shell
+scripts/deepseek-fim-server-smoke.sh
+```
+
+`deepseek-vibing fim-server` starts a local HTTP endpoint for editor experiments.
+It prints startup JSON containing `host` and `port`, then accepts
+`POST /complete` with `prefix`, optional `suffix`, optional `file_path`,
+`max_tokens`, `temperature`, and `request_id`. The service reuses the FIM config
+under `[deepseek.fim]`, applies UTF-8-safe prefix/suffix truncation, keeps an
+in-memory completion cache, and never applies completions to files.
+
 List eval tasks and run a baseline-backed report:
 
 ```shell

@@ -11095,6 +11095,9 @@ async fn fim_config_loads_defaults_and_overrides() -> std::io::Result<()> {
                 base_url: Some("https://api.deepseek.com/beta".to_string()),
                 api_key_env: Some("UNIT_DEEPSEEK_API_KEY".to_string()),
                 max_tokens: Some(256),
+                max_prefix_bytes: Some(12_000),
+                max_suffix_bytes: Some(6_000),
+                debounce_ms: Some(25),
                 timeout_ms: Some(4321),
                 temperature: Some(0.1),
             }),
@@ -11118,6 +11121,9 @@ async fn fim_config_loads_defaults_and_overrides() -> std::io::Result<()> {
     );
     assert_eq!(config.deepseek.fim.api_key_env, "UNIT_DEEPSEEK_API_KEY");
     assert_eq!(config.deepseek.fim.max_tokens, 256);
+    assert_eq!(config.deepseek.fim.max_prefix_bytes, 12_000);
+    assert_eq!(config.deepseek.fim.max_suffix_bytes, 6_000);
+    assert_eq!(config.deepseek.fim.debounce_ms, 25);
     assert_eq!(config.deepseek.fim.timeout_ms, 4321);
     assert_eq!(config.deepseek.fim.temperature, 0.1);
     Ok(())

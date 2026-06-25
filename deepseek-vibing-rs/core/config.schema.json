@@ -820,8 +820,23 @@
         "base_url": {
           "type": "string"
         },
+        "debounce_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
         "enabled": {
           "type": "boolean"
+        },
+        "max_prefix_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_suffix_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
         },
         "max_tokens": {
           "format": "uint16",

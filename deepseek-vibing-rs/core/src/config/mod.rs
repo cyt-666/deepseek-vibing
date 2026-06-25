@@ -1184,6 +1184,9 @@ pub struct DeepSeekFimConfig {
     pub base_url: String,
     pub api_key_env: String,
     pub max_tokens: u16,
+    pub max_prefix_bytes: usize,
+    pub max_suffix_bytes: usize,
+    pub debounce_ms: u64,
     pub timeout_ms: u64,
     pub temperature: f32,
 }
@@ -1196,6 +1199,9 @@ impl Default for DeepSeekFimConfig {
             base_url: "https://api.deepseek.com/beta".to_string(),
             api_key_env: "DEEPSEEK_API_KEY".to_string(),
             max_tokens: 512,
+            max_prefix_bytes: 120_000,
+            max_suffix_bytes: 60_000,
+            debounce_ms: 150,
             timeout_ms: 60_000,
             temperature: 0.2,
         }
@@ -2534,6 +2540,9 @@ fn resolve_deepseek_fim_config(fim: Option<&DeepSeekFimToml>) -> DeepSeekFimConf
             .filter(|value| !value.trim().is_empty())
             .unwrap_or(defaults.api_key_env),
         max_tokens: fim.max_tokens.unwrap_or(defaults.max_tokens),
+        max_prefix_bytes: fim.max_prefix_bytes.unwrap_or(defaults.max_prefix_bytes),
+        max_suffix_bytes: fim.max_suffix_bytes.unwrap_or(defaults.max_suffix_bytes),
+        debounce_ms: fim.debounce_ms.unwrap_or(defaults.debounce_ms),
         timeout_ms: fim.timeout_ms.unwrap_or(defaults.timeout_ms),
         temperature: fim.temperature.unwrap_or(defaults.temperature),
     }
