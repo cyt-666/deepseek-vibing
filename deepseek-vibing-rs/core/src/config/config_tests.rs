@@ -17,6 +17,8 @@ use deepseek_vibing_config::config_toml::DeepSeekFimToml;
 use deepseek_vibing_config::config_toml::DeepSeekToml;
 use deepseek_vibing_config::config_toml::EvalGatesToml;
 use deepseek_vibing_config::config_toml::EvalModeToml;
+use deepseek_vibing_config::config_toml::EvalPricingModelToml;
+use deepseek_vibing_config::config_toml::EvalPricingToml;
 use deepseek_vibing_config::config_toml::EvalToml;
 use deepseek_vibing_config::config_toml::ExperimentalRequestUserInput;
 use deepseek_vibing_config::config_toml::ProjectConfig;
@@ -11197,6 +11199,7 @@ async fn eval_config_loads_defaults() -> std::io::Result<()> {
     assert_eq!(config.eval.gates.max_avg_turns, 8.0);
     assert_eq!(config.eval.gates.max_tool_error_rate, 0.20);
     assert_eq!(config.eval.gates.max_overthinking_tasks, None);
+    assert_eq!(config.eval.pricing, None);
     Ok(())
 }
 
@@ -11223,6 +11226,20 @@ async fn eval_config_loads_overrides() -> std::io::Result<()> {
                 max_tool_error_rate: Some(0.1),
                 max_overthinking_tasks: Some(3),
             }),
+            pricing: Some(EvalPricingToml {
+                currency: Some("CNY".to_string()),
+                models: [(
+                    "deepseek-v4-flash".to_string(),
+                    EvalPricingModelToml {
+                        cache_hit_input_per_million_tokens: Some(0.1),
+                        cache_miss_input_per_million_tokens: Some(0.2),
+                        output_per_million_tokens: Some(0.3),
+                        reasoning_output_per_million_tokens: Some(0.4),
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            }),
         }),
         ..ConfigToml::default()
     };
@@ -11245,6 +11262,16 @@ async fn eval_config_loads_overrides() -> std::io::Result<()> {
     assert_eq!(config.eval.gates.max_avg_turns, 5.0);
     assert_eq!(config.eval.gates.max_tool_error_rate, 0.1);
     assert_eq!(config.eval.gates.max_overthinking_tasks, Some(3));
+    let pricing = config.eval.pricing.expect("eval pricing");
+    assert_eq!(pricing.currency, "CNY");
+    let flash = pricing
+        .models
+        .get("deepseek-v4-flash")
+        .expect("flash pricing");
+    assert_eq!(flash.cache_hit_input_per_million_tokens, 0.1);
+    assert_eq!(flash.cache_miss_input_per_million_tokens, 0.2);
+    assert_eq!(flash.output_per_million_tokens, 0.3);
+    assert_eq!(flash.reasoning_output_per_million_tokens, 0.4);
     Ok(())
 }
 

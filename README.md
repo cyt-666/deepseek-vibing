@@ -11,7 +11,7 @@ This repository is now a DeepSeek-first local coding agent baseline. It keeps th
 - DeepSeek API key configuration via `[auth].deepseek_api_key`; `DEEPSEEK_API_KEY` remains only as a lower-priority CI fallback.
 - No OpenAI or ChatGPT login requirement for the intended MVP; legacy `auth.json`, browser/device login, and ChatGPT account flows are not part of DeepSeek Vibing.
 - DeepSeek Chat/tool/reasoning path, Vision Bridge, FIM, trajectory, and eval are part of the active baseline.
-- Internal `deepseek-vibing-*` crate names are intentionally preserved until a later broad rename pass.
+- Internal Rust packages and helper binaries use the `deepseek-vibing-*` product prefix.
 
 ## Configuration
 
@@ -34,6 +34,15 @@ base_url = "https://your-vision-provider.example/v1"
 [trajectory]
 enabled = "auto"
 detail = "summary"
+
+[eval.pricing]
+currency = "USD"
+
+[eval.pricing.models.deepseek-v4-flash]
+cache_hit_input_per_million_tokens = 0.0
+cache_miss_input_per_million_tokens = 0.0
+output_per_million_tokens = 0.0
+reasoning_output_per_million_tokens = 0.0
 ```
 
 On Unix-like systems, the config may contain API keys and should be private:
@@ -74,6 +83,23 @@ Run the DeepSeek FIM live smoke against `/beta/completions`:
 ```shell
 scripts/deepseek-fim-live-smoke.sh
 ```
+
+List eval tasks and run a baseline-backed report:
+
+```shell
+cargo run --manifest-path deepseek-vibing-rs/Cargo.toml -p deepseek-vibing-cli --bin deepseek-vibing -- eval list --dataset evals/smoke
+cargo run --manifest-path deepseek-vibing-rs/Cargo.toml -p deepseek-vibing-cli --bin deepseek-vibing -- eval run --dataset evals/smoke --mode offline
+```
+
+`evals/regression` contains optional broader coding tasks for local or live regression runs.
+Use the committed baseline for live or CI checks where tasks are actually attempted:
+
+```shell
+cargo run --manifest-path deepseek-vibing-rs/Cargo.toml -p deepseek-vibing-cli --bin deepseek-vibing -- eval run --dataset evals/smoke --baseline evals/baselines/smoke-baseline.json --mode live --enforce
+```
+
+Cost estimates are only calculated when `[eval.pricing]` supplies per-model token prices;
+DeepSeek Vibing does not hard-code provider pricing or inspect billing data.
 
 See [PROJECT_PLAN.md](./PROJECT_PLAN.md) for the staged migration plan.
 

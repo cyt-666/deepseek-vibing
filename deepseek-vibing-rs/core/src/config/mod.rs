@@ -33,6 +33,8 @@ use deepseek_vibing_config::config_toml::DeepSeekFimToml;
 use deepseek_vibing_config::config_toml::DeepSeekRouterToml;
 use deepseek_vibing_config::config_toml::EvalGatesToml;
 use deepseek_vibing_config::config_toml::EvalModeToml;
+use deepseek_vibing_config::config_toml::EvalPricingModelToml;
+use deepseek_vibing_config::config_toml::EvalPricingToml;
 use deepseek_vibing_config::config_toml::EvalToml;
 use deepseek_vibing_config::config_toml::ProjectConfig;
 use deepseek_vibing_config::config_toml::RealtimeAudioConfig;
@@ -1326,6 +1328,7 @@ pub struct EvalConfig {
     pub max_concurrency: usize,
     pub keep_workspaces: bool,
     pub gates: EvalGatesConfig,
+    pub pricing: Option<EvalPricingConfig>,
 }
 
 impl Default for EvalConfig {
@@ -1339,8 +1342,23 @@ impl Default for EvalConfig {
             max_concurrency: 1,
             keep_workspaces: false,
             gates: EvalGatesConfig::default(),
+            pricing: None,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalPricingConfig {
+    pub currency: String,
+    pub models: BTreeMap<String, EvalPricingModelConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalPricingModelConfig {
+    pub cache_hit_input_per_million_tokens: f64,
+    pub cache_miss_input_per_million_tokens: f64,
+    pub output_per_million_tokens: f64,
+    pub reasoning_output_per_million_tokens: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -2601,6 +2619,7 @@ fn resolve_eval_config(eval: Option<&EvalToml>) -> EvalConfig {
         max_concurrency: eval.max_concurrency.unwrap_or(defaults.max_concurrency),
         keep_workspaces: eval.keep_workspaces.unwrap_or(defaults.keep_workspaces),
         gates: resolve_eval_gates_config(eval.gates.as_ref()),
+        pricing: resolve_eval_pricing_config(eval.pricing.as_ref()),
     }
 }
 
@@ -2619,6 +2638,43 @@ fn resolve_eval_gates_config(gates: Option<&EvalGatesToml>) -> EvalGatesConfig {
         max_overthinking_tasks: gates
             .max_overthinking_tasks
             .or(defaults.max_overthinking_tasks),
+    }
+}
+
+fn resolve_eval_pricing_config(pricing: Option<&EvalPricingToml>) -> Option<EvalPricingConfig> {
+    let pricing = pricing?;
+    let models = pricing
+        .models
+        .iter()
+        .map(|(model, model_pricing)| {
+            (
+                model.clone(),
+                resolve_eval_pricing_model_config(model_pricing),
+            )
+        })
+        .collect::<BTreeMap<_, _>>();
+    Some(EvalPricingConfig {
+        currency: pricing
+            .currency
+            .clone()
+            .filter(|currency| !currency.trim().is_empty())
+            .unwrap_or_else(|| "USD".to_string()),
+        models,
+    })
+}
+
+fn resolve_eval_pricing_model_config(pricing: &EvalPricingModelToml) -> EvalPricingModelConfig {
+    EvalPricingModelConfig {
+        cache_hit_input_per_million_tokens: pricing
+            .cache_hit_input_per_million_tokens
+            .unwrap_or(0.0),
+        cache_miss_input_per_million_tokens: pricing
+            .cache_miss_input_per_million_tokens
+            .unwrap_or(0.0),
+        output_per_million_tokens: pricing.output_per_million_tokens.unwrap_or(0.0),
+        reasoning_output_per_million_tokens: pricing
+            .reasoning_output_per_million_tokens
+            .unwrap_or(0.0),
     }
 }
 

@@ -2631,6 +2631,7 @@ async fn run_eval_command(command: EvalCommand) -> anyhow::Result<()> {
                 task_results: Vec::new(),
                 trajectories,
                 gates: &config.eval.gates,
+                pricing: config.eval.pricing.as_ref(),
                 enforce: summarize.enforce,
                 baseline: None,
             });
@@ -2738,6 +2739,7 @@ async fn run_eval_dataset(
         task_results,
         trajectories,
         gates: &config.eval.gates,
+        pricing: config.eval.pricing.as_ref(),
         enforce: command.enforce,
         baseline: baseline.as_ref(),
     });
@@ -3067,6 +3069,10 @@ fn render_eval_report(report: &EvalRunReport, path: Option<&Path>) -> String {
         format_optional_percent(report.metrics.patch_accept_rate)
     ));
     output.push_str(&format!(
+        "Cost estimate: {}\n",
+        format_eval_cost_estimate(report.metrics.cost_estimate.as_ref())
+    ));
+    output.push_str(&format!(
         "Over-thinking tasks: {}\n",
         report.metrics.overthinking_task_count
     ));
@@ -3089,6 +3095,39 @@ fn render_eval_report(report: &EvalRunReport, path: Option<&Path>) -> String {
             check.name,
             if check.passed { "passed" } else { "failed" }
         ));
+    }
+    if let Some(comparison) = report.baseline_comparison.as_ref() {
+        output.push_str(&format!("Baseline: {}\n", comparison.baseline_run_id));
+        if !comparison.metric_deltas.is_empty() {
+            output.push_str("Metric deltas:\n");
+            for delta in &comparison.metric_deltas {
+                output.push_str(&format!(
+                    "- {}: {} -> {} ({})\n",
+                    delta.name,
+                    format_optional_float(delta.baseline),
+                    format_optional_float(delta.current),
+                    format_optional_signed_float(delta.delta)
+                ));
+            }
+        }
+        if !comparison.task_regressions.is_empty() {
+            output.push_str("Task regressions:\n");
+            for regression in &comparison.task_regressions {
+                output.push_str(&format!(
+                    "- {}: {:?} -> {:?}\n",
+                    regression.task_id, regression.baseline_status, regression.current_status
+                ));
+            }
+        }
+        if !comparison.task_recoveries.is_empty() {
+            output.push_str("Task recoveries:\n");
+            for recovery in &comparison.task_recoveries {
+                output.push_str(&format!(
+                    "- {}: {:?} -> {:?}\n",
+                    recovery.task_id, recovery.baseline_status, recovery.current_status
+                ));
+            }
+        }
     }
     if !report.task_results.is_empty() {
         output.push_str("Tasks:\n");
@@ -3117,6 +3156,19 @@ fn format_optional_percent(value: Option<f64>) -> String {
 fn format_optional_float(value: Option<f64>) -> String {
     value
         .map(|value| format!("{value:.2}"))
+        .unwrap_or_else(|| "n/a".to_string())
+}
+
+fn format_optional_signed_float(value: Option<f64>) -> String {
+    value
+        .map(|value| format!("{value:+.2}"))
+        .unwrap_or_else(|| "n/a".to_string())
+}
+
+fn format_eval_cost_estimate(
+    cost: Option<&deepseek_vibing_core::eval::EvalCostEstimate>,
+) -> String {
+    cost.map(|cost| format!("{:.6} {}", cost.total, cost.currency))
         .unwrap_or_else(|| "n/a".to_string())
 }
 
@@ -3569,6 +3621,71 @@ mod tests {
         assert!(run.enforce);
         assert!(run.json);
         assert!(run.keep_workspaces);
+    }
+
+    #[test]
+    fn eval_report_renders_cost_and_baseline_comparison() {
+        let report = EvalRunReport {
+            run_id: "run".to_string(),
+            generated_at_ms: 0,
+            mode: EvalMode::Live,
+            dataset_dir: None,
+            trajectory_root: None,
+            task_results: Vec::new(),
+            metrics: deepseek_vibing_core::eval::EvalMetrics {
+                task_count: 1,
+                attempted_task_count: 1,
+                passed_task_count: 0,
+                failed_task_count: 1,
+                skipped_task_count: 0,
+                trajectory_count: 0,
+                total_turns: 0,
+                pass_rate: Some(0.0),
+                avg_turns: Some(2.0),
+                avg_total_tokens: None,
+                cache_hit_ratio: None,
+                patch_accept_rate: None,
+                test_failure_recovery_rate: None,
+                tool_error_rate: Some(0.0),
+                overthinking_task_count: 0,
+                interrupt_abort_rollback_count: 0,
+                total_tool_calls: 0,
+                tool_error_count: 0,
+                cost_estimate: Some(deepseek_vibing_core::eval::EvalCostEstimate {
+                    currency: "USD".to_string(),
+                    total: 0.012345,
+                    by_model: Default::default(),
+                }),
+            },
+            gate: deepseek_vibing_core::eval::EvalGateResult {
+                enforced: true,
+                passed: false,
+                checks: Vec::new(),
+            },
+            baseline_comparison: Some(deepseek_vibing_core::eval::EvalBaselineComparison {
+                baseline_run_id: "baseline".to_string(),
+                metric_deltas: vec![deepseek_vibing_core::eval::EvalMetricDelta {
+                    name: "pass_rate".to_string(),
+                    baseline: Some(1.0),
+                    current: Some(0.0),
+                    delta: Some(-1.0),
+                }],
+                task_regressions: vec![deepseek_vibing_core::eval::EvalTaskStatusChange {
+                    task_id: "task_a".to_string(),
+                    baseline_status: deepseek_vibing_core::eval::EvalTaskStatus::Passed,
+                    current_status: deepseek_vibing_core::eval::EvalTaskStatus::Failed,
+                }],
+                task_recoveries: Vec::new(),
+            }),
+        };
+
+        let rendered = render_eval_report(&report, None);
+
+        assert!(rendered.contains("Cost estimate: 0.012345 USD"));
+        assert!(rendered.contains("Baseline: baseline"));
+        assert!(rendered.contains("pass_rate: 1.00 -> 0.00 (-1.00)"));
+        assert!(rendered.contains("Task regressions:"));
+        assert!(rendered.contains("task_a"));
     }
 
     #[test]

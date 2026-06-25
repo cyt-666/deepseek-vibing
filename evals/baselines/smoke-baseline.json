@@ -1,0 +1,63 @@
+{
+  "run_id": "smoke-baseline",
+  "generated_at_ms": 0,
+  "mode": "live",
+  "dataset_dir": "evals/smoke",
+  "task_results": [
+    {
+      "task_id": "rust_add_function",
+      "title": "Implement a missing add function",
+      "tags": ["rust", "single_file"],
+      "status": "passed"
+    },
+    {
+      "task_id": "rust_dedupe_order",
+      "title": "Deduplicate while preserving order",
+      "tags": ["rust", "collections"],
+      "status": "passed"
+    },
+    {
+      "task_id": "rust_divide_error",
+      "title": "Return an error instead of panicking",
+      "tags": ["rust", "error_handling"],
+      "status": "passed"
+    },
+    {
+      "task_id": "rust_last_index",
+      "title": "Fix an index boundary condition",
+      "tags": ["rust", "boundary"],
+      "status": "passed"
+    },
+    {
+      "task_id": "rust_multi_file_math",
+      "title": "Fix a small multi-file math API",
+      "tags": ["rust", "multi_file"],
+      "status": "passed"
+    },
+    {
+      "task_id": "rust_trim_username",
+      "title": "Normalize usernames",
+      "tags": ["rust", "edge_case"],
+      "status": "passed"
+    }
+  ],
+  "metrics": {
+    "task_count": 6,
+    "attempted_task_count": 6,
+    "passed_task_count": 6,
+    "failed_task_count": 0,
+    "skipped_task_count": 0,
+    "trajectory_count": 0,
+    "total_turns": 0,
+    "pass_rate": 1.0,
+    "overthinking_task_count": 0,
+    "interrupt_abort_rollback_count": 0,
+    "total_tool_calls": 0,
+    "tool_error_count": 0
+  },
+  "gate": {
+    "enforced": true,
+    "passed": true,
+    "checks": []
+  }
+}

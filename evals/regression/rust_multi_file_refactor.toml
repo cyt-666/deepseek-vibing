@@ -1,0 +1,47 @@
+id = "rust_multi_file_refactor"
+title = "Fix a multi-file formatter API"
+tags = ["rust", "multi_file", "refactor"]
+prompt = "Fix this small multi-file crate so display labels are formatted consistently. Keep the module split intact."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_multi_file_refactor"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+mod label;
+
+pub use label::format_label;
+
+pub fn display_user(id: u64, name: &str) -> String {
+    format_label(id, name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn formats_user_labels() {
+        assert_eq!(display_user(7, " Ada "), "#7 ada");
+        assert_eq!(display_user(42, "BOB"), "#42 bob");
+    }
+}
+"""
+
+[[files]]
+path = "src/label.rs"
+content = """
+pub fn format_label(id: u64, name: &str) -> String {
+    format!("{id}: {name}")
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]

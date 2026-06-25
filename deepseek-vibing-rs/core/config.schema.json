@@ -413,12 +413,6 @@
             "chronicle": {
               "type": "boolean"
             },
-            "deepseek_vibing_git_commit": {
-              "type": "boolean"
-            },
-            "deepseek_vibing_hooks": {
-              "type": "boolean"
-            },
             "collab": {
               "type": "boolean"
             },
@@ -429,6 +423,12 @@
               "type": "boolean"
             },
             "connectors": {
+              "type": "boolean"
+            },
+            "deepseek_vibing_git_commit": {
+              "type": "boolean"
+            },
+            "deepseek_vibing_hooks": {
               "type": "boolean"
             },
             "default_mode_request_user_input": {
@@ -898,6 +898,44 @@
       ],
       "type": "string"
     },
+    "EvalPricingModelToml": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_hit_input_per_million_tokens": {
+          "format": "double",
+          "type": "number"
+        },
+        "cache_miss_input_per_million_tokens": {
+          "format": "double",
+          "type": "number"
+        },
+        "output_per_million_tokens": {
+          "format": "double",
+          "type": "number"
+        },
+        "reasoning_output_per_million_tokens": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "EvalPricingToml": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "type": "string"
+        },
+        "models": {
+          "additionalProperties": {
+            "$ref": "#/definitions/EvalPricingModelToml"
+          },
+          "default": {},
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
     "EvalToml": {
       "additionalProperties": false,
       "properties": {
@@ -917,6 +955,9 @@
           "format": "uint",
           "minimum": 0.0,
           "type": "integer"
+        },
+        "pricing": {
+          "$ref": "#/definitions/EvalPricingToml"
         },
         "reports_dir": {
           "$ref": "#/definitions/AbsolutePathBuf"
@@ -4694,12 +4735,6 @@
       "description": "Default permissions profile to apply. Names starting with `:` refer to built-in profiles; other names are resolved from the `[permissions]` table.",
       "type": "string"
     },
-    "desktop": {
-      "additionalProperties": true,
-      "default": null,
-      "description": "Opaque desktop settings stored alongside the rest of config.toml.",
-      "type": "object"
-    },
     "developer_instructions": {
       "default": null,
       "description": "Developer instructions inserted as a `developer` role message.",
@@ -4787,12 +4822,6 @@
         "chronicle": {
           "type": "boolean"
         },
-        "deepseek_vibing_git_commit": {
-          "type": "boolean"
-        },
-        "deepseek_vibing_hooks": {
-          "type": "boolean"
-        },
         "collab": {
           "type": "boolean"
         },
@@ -4803,6 +4832,12 @@
           "type": "boolean"
         },
         "connectors": {
+          "type": "boolean"
+        },
+        "deepseek_vibing_git_commit": {
+          "type": "boolean"
+        },
+        "deepseek_vibing_hooks": {
           "type": "boolean"
         },
         "default_mode_request_user_input": {
@@ -5320,7 +5355,7 @@
     },
     "project_root_markers": {
       "default": null,
-      "description": "Markers used to detect the project root when searching parent directories for `.deepseek-vibing` folders. Defaults to [\".git\"] when unset.",
+      "description": "Markers used to detect the project root when searching parent directories for `.deepseek_vibing` folders. Defaults to [\".git\"] when unset.",
       "items": {
         "type": "string"
       },

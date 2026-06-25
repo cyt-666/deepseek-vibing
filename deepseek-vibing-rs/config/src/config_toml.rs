@@ -188,6 +188,23 @@ pub struct EvalGatesToml {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, JsonSchema)]
 #[schemars(deny_unknown_fields)]
+pub struct EvalPricingModelToml {
+    pub cache_hit_input_per_million_tokens: Option<f64>,
+    pub cache_miss_input_per_million_tokens: Option<f64>,
+    pub output_per_million_tokens: Option<f64>,
+    pub reasoning_output_per_million_tokens: Option<f64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct EvalPricingToml {
+    pub currency: Option<String>,
+    #[serde(default)]
+    pub models: BTreeMap<String, EvalPricingModelToml>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct EvalToml {
     pub dataset_dir: Option<AbsolutePathBuf>,
     pub reports_dir: Option<AbsolutePathBuf>,
@@ -197,6 +214,7 @@ pub struct EvalToml {
     pub max_concurrency: Option<usize>,
     pub keep_workspaces: Option<bool>,
     pub gates: Option<EvalGatesToml>,
+    pub pricing: Option<EvalPricingToml>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq, JsonSchema)]

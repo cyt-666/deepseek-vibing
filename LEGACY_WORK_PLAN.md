@@ -321,17 +321,18 @@
 
 工作内容：
 
-- 建立固定 baseline report。
-- 增加更多任务类型：多文件重构、测试失败恢复、权限/沙箱、配置变更、图片观察。
-- 增加可选 live task 集合。
-- 引入用户配置价格表，计算成本估算。
-- 增加趋势对比和回归摘要。
+- 建立固定 baseline report。（已完成：`evals/baselines/smoke-baseline.json`）
+- 增加更多任务类型：多文件重构、测试失败恢复、权限/沙箱、配置变更、CLI 参数解析。（已完成：`evals/regression`）
+- 增加可选 live task 集合。（已完成第一批：regression 数据集可用 `eval run --dataset evals/regression --mode live` 显式运行）
+- 引入用户配置价格表，计算成本估算。（已完成：`[eval.pricing]` 可选配置，未配置时 `cost_estimate = null`）
+- 增加趋势对比和回归摘要。（已完成第一批：baseline comparison、metric deltas、task regressions/recoveries）
+- 后续可继续增加图片观察任务、更多语言/仓库形态任务和多次 report 趋势图。
 
 验收标准：
 
-- `eval run --baseline --enforce` 可用于本地 CI。
+- `eval run --baseline --enforce` 可用于本地 CI。（已完成：baseline 存在时自动 enforced，已通过固定 smoke baseline 设计）
 - 报告能区分 offline operational metrics 和 live task pass rate。
-- cost 默认仍可为空，不硬编码 DeepSeek 价格。
+- cost 默认仍可为空，不硬编码 DeepSeek 价格。（已完成）
 
 ### P3：Sandbox Runtime 深化
 

@@ -1,9 +1,12 @@
 use crate::config::EvalGatesConfig;
 use crate::config::EvalMode;
+use crate::config::EvalPricingConfig;
+use crate::config::EvalPricingModelConfig;
 use crate::trajectory::TrajectorySummary;
 use chrono::Utc;
 use serde::Deserialize;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Component;
@@ -104,7 +107,24 @@ pub struct EvalMetrics {
     pub total_tool_calls: usize,
     pub tool_error_count: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cost_estimate: Option<f64>,
+    pub cost_estimate: Option<EvalCostEstimate>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EvalCostEstimate {
+    pub currency: String,
+    pub total: f64,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub by_model: BTreeMap<String, EvalModelCostEstimate>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EvalModelCostEstimate {
+    pub total: f64,
+    pub cache_hit_input_tokens: i64,
+    pub cache_miss_input_tokens: i64,
+    pub output_tokens: i64,
+    pub reasoning_output_tokens: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -139,6 +159,37 @@ pub struct EvalRunReport {
     pub task_results: Vec<EvalTaskResult>,
     pub metrics: EvalMetrics,
     pub gate: EvalGateResult,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub baseline_comparison: Option<EvalBaselineComparison>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EvalBaselineComparison {
+    pub baseline_run_id: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub metric_deltas: Vec<EvalMetricDelta>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub task_regressions: Vec<EvalTaskStatusChange>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub task_recoveries: Vec<EvalTaskStatusChange>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EvalMetricDelta {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub baseline: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub current: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delta: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EvalTaskStatusChange {
+    pub task_id: String,
+    pub baseline_status: EvalTaskStatus,
+    pub current_status: EvalTaskStatus,
 }
 
 pub struct EvalReportInput<'a> {
@@ -149,6 +200,7 @@ pub struct EvalReportInput<'a> {
     pub task_results: Vec<EvalTaskResult>,
     pub trajectories: Vec<TrajectorySummary>,
     pub gates: &'a EvalGatesConfig,
+    pub pricing: Option<&'a EvalPricingConfig>,
     pub enforce: bool,
     pub baseline: Option<&'a EvalRunReport>,
 }
@@ -194,13 +246,32 @@ pub fn materialize_task_workspace(task: &EvalTask, workspace: &Path) -> anyhow::
 }
 
 pub fn build_eval_report(input: EvalReportInput<'_>) -> EvalRunReport {
-    let metrics = compute_metrics(&input.task_results, &input.trajectories);
-    let gate = evaluate_gates(
+    let metrics = compute_metrics(&input.task_results, &input.trajectories, input.pricing);
+    let baseline_comparison = input
+        .baseline
+        .map(|baseline| compare_to_baseline(&metrics, &input.task_results, baseline));
+    let mut gate = evaluate_gates(
         &metrics,
         input.gates,
         input.enforce,
         input.baseline.map(|report| &report.metrics),
     );
+    if let Some(comparison) = baseline_comparison.as_ref()
+        && !comparison.task_regressions.is_empty()
+    {
+        gate.enforced = true;
+        gate.passed = false;
+        gate.checks.push(EvalGateCheck {
+            name: "baseline_task_regressions".to_string(),
+            passed: false,
+            value: Some(comparison.task_regressions.len() as f64),
+            threshold: Some(0.0),
+            message: format!(
+                "baseline_task_regressions: {} previously passing task(s) regressed",
+                comparison.task_regressions.len()
+            ),
+        });
+    }
     EvalRunReport {
         run_id: input.run_id,
         generated_at_ms: Utc::now().timestamp_millis(),
@@ -210,6 +281,7 @@ pub fn build_eval_report(input: EvalReportInput<'_>) -> EvalRunReport {
         task_results: input.task_results,
         metrics,
         gate,
+        baseline_comparison,
     }
 }
 
@@ -276,6 +348,7 @@ pub fn default_eval_work_dir() -> PathBuf {
 fn compute_metrics(
     task_results: &[EvalTaskResult],
     trajectories: &[TrajectorySummary],
+    pricing: Option<&EvalPricingConfig>,
 ) -> EvalMetrics {
     let task_count = task_results.len();
     let passed_task_count = task_results
@@ -376,7 +449,161 @@ fn compute_metrics(
         interrupt_abort_rollback_count,
         total_tool_calls,
         tool_error_count,
-        cost_estimate: None,
+        cost_estimate: compute_cost_estimate(trajectories, pricing),
+    }
+}
+
+fn compute_cost_estimate(
+    trajectories: &[TrajectorySummary],
+    pricing: Option<&EvalPricingConfig>,
+) -> Option<EvalCostEstimate> {
+    let pricing = pricing?;
+    let mut by_model = BTreeMap::<String, EvalModelCostEstimate>::new();
+    for trajectory in trajectories {
+        let Some(model_pricing) = pricing.models.get(&trajectory.model) else {
+            continue;
+        };
+        let model_total =
+            by_model
+                .entry(trajectory.model.clone())
+                .or_insert_with(|| EvalModelCostEstimate {
+                    total: 0.0,
+                    cache_hit_input_tokens: 0,
+                    cache_miss_input_tokens: 0,
+                    output_tokens: 0,
+                    reasoning_output_tokens: 0,
+                });
+        for turn in &trajectory.turns {
+            let Some(usage) = turn.token_usage.as_ref() else {
+                continue;
+            };
+            model_total.cache_hit_input_tokens += usage.cached_input_tokens;
+            model_total.cache_miss_input_tokens += usage.non_cached_input_tokens;
+            model_total.output_tokens += usage.output_tokens;
+            model_total.reasoning_output_tokens += usage.reasoning_output_tokens;
+            model_total.total += cost_for_usage(
+                usage.cached_input_tokens,
+                usage.non_cached_input_tokens,
+                usage.output_tokens,
+                usage.reasoning_output_tokens,
+                model_pricing,
+            );
+        }
+    }
+    if by_model.is_empty() {
+        return None;
+    }
+    let total = by_model.values().map(|model| model.total).sum::<f64>();
+    Some(EvalCostEstimate {
+        currency: pricing.currency.clone(),
+        total,
+        by_model,
+    })
+}
+
+fn cost_for_usage(
+    cache_hit_input_tokens: i64,
+    cache_miss_input_tokens: i64,
+    output_tokens: i64,
+    reasoning_output_tokens: i64,
+    pricing: &EvalPricingModelConfig,
+) -> f64 {
+    let million = 1_000_000.0;
+    (cache_hit_input_tokens as f64 / million) * pricing.cache_hit_input_per_million_tokens
+        + (cache_miss_input_tokens as f64 / million) * pricing.cache_miss_input_per_million_tokens
+        + (output_tokens as f64 / million) * pricing.output_per_million_tokens
+        + (reasoning_output_tokens as f64 / million) * pricing.reasoning_output_per_million_tokens
+}
+
+fn compare_to_baseline(
+    metrics: &EvalMetrics,
+    task_results: &[EvalTaskResult],
+    baseline: &EvalRunReport,
+) -> EvalBaselineComparison {
+    let current_status_by_task = task_results
+        .iter()
+        .map(|result| (result.task_id.as_str(), &result.status))
+        .collect::<HashMap<_, _>>();
+    let mut task_regressions = Vec::new();
+    let mut task_recoveries = Vec::new();
+    for baseline_task in &baseline.task_results {
+        let current_status = current_status_by_task
+            .get(baseline_task.task_id.as_str())
+            .copied()
+            .cloned()
+            .unwrap_or(EvalTaskStatus::Skipped);
+        if baseline_task.status == EvalTaskStatus::Passed
+            && current_status != EvalTaskStatus::Passed
+        {
+            task_regressions.push(EvalTaskStatusChange {
+                task_id: baseline_task.task_id.clone(),
+                baseline_status: baseline_task.status.clone(),
+                current_status,
+            });
+        } else if baseline_task.status != EvalTaskStatus::Passed
+            && current_status == EvalTaskStatus::Passed
+        {
+            task_recoveries.push(EvalTaskStatusChange {
+                task_id: baseline_task.task_id.clone(),
+                baseline_status: baseline_task.status.clone(),
+                current_status,
+            });
+        }
+    }
+
+    EvalBaselineComparison {
+        baseline_run_id: baseline.run_id.clone(),
+        metric_deltas: vec![
+            metric_delta("pass_rate", baseline.metrics.pass_rate, metrics.pass_rate),
+            metric_delta("avg_turns", baseline.metrics.avg_turns, metrics.avg_turns),
+            metric_delta(
+                "avg_total_tokens",
+                baseline.metrics.avg_total_tokens,
+                metrics.avg_total_tokens,
+            ),
+            metric_delta(
+                "cache_hit_ratio",
+                baseline.metrics.cache_hit_ratio,
+                metrics.cache_hit_ratio,
+            ),
+            metric_delta(
+                "tool_error_rate",
+                baseline.metrics.tool_error_rate,
+                metrics.tool_error_rate,
+            ),
+            metric_delta(
+                "patch_accept_rate",
+                baseline.metrics.patch_accept_rate,
+                metrics.patch_accept_rate,
+            ),
+            metric_delta(
+                "overthinking_task_count",
+                Some(baseline.metrics.overthinking_task_count as f64),
+                Some(metrics.overthinking_task_count as f64),
+            ),
+            metric_delta(
+                "cost_estimate",
+                baseline
+                    .metrics
+                    .cost_estimate
+                    .as_ref()
+                    .map(|cost| cost.total),
+                metrics.cost_estimate.as_ref().map(|cost| cost.total),
+            ),
+        ],
+        task_regressions,
+        task_recoveries,
+    }
+}
+
+fn metric_delta(name: &str, baseline: Option<f64>, current: Option<f64>) -> EvalMetricDelta {
+    EvalMetricDelta {
+        name: name.to_string(),
+        baseline,
+        current,
+        delta: baseline
+            .zip(current)
+            .map(|(baseline, current)| current - baseline),
     }
 }
 
@@ -692,6 +919,7 @@ command = ["cargo", "test"]
             task_results,
             trajectories: vec![trajectory],
             gates: &EvalGatesConfig::default(),
+            pricing: None,
             enforce: false,
             baseline: None,
         });
@@ -702,7 +930,202 @@ command = ["cargo", "test"]
         assert_eq!(report.metrics.tool_error_rate, Some(0.5));
         assert_eq!(report.metrics.test_failure_recovery_rate, Some(1.0));
         assert_eq!(report.metrics.overthinking_task_count, 1);
+        assert_eq!(report.metrics.cost_estimate, None);
         assert!(!report.gate.enforced);
+    }
+
+    #[test]
+    fn pricing_estimates_cost_by_model() {
+        let pricing = EvalPricingConfig {
+            currency: "USD".to_string(),
+            models: [(
+                "deepseek-v4-flash".to_string(),
+                crate::config::EvalPricingModelConfig {
+                    cache_hit_input_per_million_tokens: 1.0,
+                    cache_miss_input_per_million_tokens: 2.0,
+                    output_per_million_tokens: 3.0,
+                    reasoning_output_per_million_tokens: 4.0,
+                },
+            )]
+            .into_iter()
+            .collect(),
+        };
+        let trajectory = TrajectorySummary {
+            trajectory_id: "tr1".to_string(),
+            path: PathBuf::from("/tmp/trajectory.jsonl"),
+            thread_id: "thread".to_string(),
+            provider: "deepseek".to_string(),
+            model: "deepseek-v4-flash".to_string(),
+            reasoning_effort: None,
+            started_at_ms: 0,
+            cwd: PathBuf::from("/tmp"),
+            sandbox_tier: crate::trajectory::TrajectorySandboxTier::Function,
+            network: crate::trajectory::TrajectoryNetworkStatus::Restricted,
+            turns: vec![TrajectoryTurn {
+                turn_id: "turn".to_string(),
+                status: "completed".to_string(),
+                started_at_ms: None,
+                completed_at_ms: None,
+                duration_ms: None,
+                token_usage: Some(TrajectoryUsage {
+                    input_tokens: 10,
+                    cached_input_tokens: 1_000_000,
+                    non_cached_input_tokens: 2_000_000,
+                    output_tokens: 3_000_000,
+                    reasoning_output_tokens: 4_000_000,
+                    total_tokens: 10_000_000,
+                }),
+                tool_calls: Vec::new(),
+                diff: None,
+            }],
+            raw_trace_root: None,
+        };
+
+        let report = build_eval_report(EvalReportInput {
+            run_id: "run".to_string(),
+            mode: EvalMode::Offline,
+            dataset_dir: None,
+            trajectory_root: None,
+            task_results: Vec::new(),
+            trajectories: vec![trajectory],
+            gates: &EvalGatesConfig::default(),
+            pricing: Some(&pricing),
+            enforce: false,
+            baseline: None,
+        });
+
+        let cost = report.metrics.cost_estimate.expect("cost estimate");
+        assert_eq!(cost.currency, "USD");
+        assert_eq!(cost.total, 30.0);
+        assert_eq!(
+            cost.by_model
+                .get("deepseek-v4-flash")
+                .expect("flash cost")
+                .total,
+            30.0
+        );
+    }
+
+    #[test]
+    fn baseline_comparison_flags_task_regressions_and_metric_deltas() {
+        let baseline = EvalRunReport {
+            run_id: "baseline".to_string(),
+            generated_at_ms: 0,
+            mode: EvalMode::Live,
+            dataset_dir: None,
+            trajectory_root: None,
+            task_results: vec![EvalTaskResult {
+                task_id: "task_a".to_string(),
+                title: "Task A".to_string(),
+                tags: Vec::new(),
+                status: EvalTaskStatus::Passed,
+                workspace: None,
+                trajectory_paths: Vec::new(),
+                verify: None,
+                error: None,
+                skip_reason: None,
+            }],
+            metrics: EvalMetrics {
+                task_count: 1,
+                attempted_task_count: 1,
+                passed_task_count: 1,
+                failed_task_count: 0,
+                skipped_task_count: 0,
+                trajectory_count: 0,
+                total_turns: 0,
+                pass_rate: Some(1.0),
+                avg_turns: Some(1.0),
+                avg_total_tokens: Some(100.0),
+                cache_hit_ratio: Some(0.5),
+                patch_accept_rate: Some(1.0),
+                test_failure_recovery_rate: None,
+                tool_error_rate: Some(0.0),
+                overthinking_task_count: 0,
+                interrupt_abort_rollback_count: 0,
+                total_tool_calls: 0,
+                tool_error_count: 0,
+                cost_estimate: None,
+            },
+            gate: EvalGateResult {
+                enforced: true,
+                passed: true,
+                checks: Vec::new(),
+            },
+            baseline_comparison: None,
+        };
+        let report = build_eval_report(EvalReportInput {
+            run_id: "run".to_string(),
+            mode: EvalMode::Live,
+            dataset_dir: None,
+            trajectory_root: None,
+            task_results: vec![EvalTaskResult {
+                task_id: "task_a".to_string(),
+                title: "Task A".to_string(),
+                tags: Vec::new(),
+                status: EvalTaskStatus::Failed,
+                workspace: None,
+                trajectory_paths: Vec::new(),
+                verify: None,
+                error: None,
+                skip_reason: None,
+            }],
+            trajectories: Vec::new(),
+            gates: &EvalGatesConfig::default(),
+            pricing: None,
+            enforce: false,
+            baseline: Some(&baseline),
+        });
+
+        let comparison = report.baseline_comparison.expect("baseline comparison");
+        assert_eq!(comparison.baseline_run_id, "baseline");
+        assert_eq!(comparison.task_regressions.len(), 1);
+        assert!(comparison.metric_deltas.iter().any(|delta| {
+            delta.name == "pass_rate" && delta.baseline == Some(1.0) && delta.current == Some(0.0)
+        }));
+        assert!(report.gate.enforced);
+        assert!(!report.gate.passed);
+        assert!(
+            report
+                .gate
+                .checks
+                .iter()
+                .any(|check| check.name == "baseline_task_regressions")
+        );
+    }
+
+    #[test]
+    fn old_report_json_with_null_cost_and_no_baseline_comparison_still_loads() {
+        let report: EvalRunReport = serde_json::from_str(
+            r#"
+{
+  "run_id": "old",
+  "generated_at_ms": 0,
+  "mode": "offline",
+  "metrics": {
+    "task_count": 0,
+    "attempted_task_count": 0,
+    "passed_task_count": 0,
+    "failed_task_count": 0,
+    "skipped_task_count": 0,
+    "trajectory_count": 0,
+    "total_turns": 0,
+    "overthinking_task_count": 0,
+    "interrupt_abort_rollback_count": 0,
+    "total_tool_calls": 0,
+    "tool_error_count": 0,
+    "cost_estimate": null
+  },
+  "gate": {
+    "enforced": false,
+    "passed": true
+  }
+}
+"#,
+        )
+        .expect("old report should deserialize");
+
+        assert_eq!(report.metrics.cost_estimate, None);
+        assert_eq!(report.baseline_comparison, None);
     }
 
     #[test]

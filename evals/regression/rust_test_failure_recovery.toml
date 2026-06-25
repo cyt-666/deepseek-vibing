@@ -1,0 +1,40 @@
+id = "rust_test_failure_recovery"
+title = "Recover after a failing edge-case test"
+tags = ["rust", "tests", "recovery"]
+prompt = "Run the tests, inspect the failing edge case, and fix the implementation without changing the public function signature."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_test_failure_recovery"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+pub fn clamp_percent(value: i32) -> u8 {
+    value as u8
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn keeps_values_inside_range() {
+        assert_eq!(clamp_percent(42), 42);
+    }
+
+    #[test]
+    fn clamps_out_of_range_values() {
+        assert_eq!(clamp_percent(-10), 0);
+        assert_eq!(clamp_percent(120), 100);
+    }
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]

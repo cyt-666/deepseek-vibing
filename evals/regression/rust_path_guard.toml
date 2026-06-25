@@ -1,0 +1,44 @@
+id = "rust_path_guard"
+title = "Reject paths that escape a workspace"
+tags = ["rust", "sandbox", "path"]
+prompt = "Fix the path guard so only normal relative workspace paths are accepted. Reject absolute paths, parent-directory escapes, and empty paths."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_path_guard"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+use std::path::{Component, Path};
+
+pub fn is_workspace_relative(path: &Path) -> bool {
+    path.components().all(|component| matches!(component, Component::Normal(_)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepts_normal_relative_paths() {
+        assert!(is_workspace_relative(Path::new("src/lib.rs")));
+        assert!(is_workspace_relative(Path::new("README.md")));
+    }
+
+    #[test]
+    fn rejects_escape_and_absolute_paths() {
+        assert!(!is_workspace_relative(Path::new("../secret.txt")));
+        assert!(!is_workspace_relative(Path::new("/tmp/file.txt")));
+        assert!(!is_workspace_relative(Path::new("")));
+    }
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]

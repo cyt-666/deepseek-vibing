@@ -1,0 +1,51 @@
+id = "rust_config_parse"
+title = "Parse a tiny key-value config"
+tags = ["rust", "config", "error_handling"]
+prompt = "Fix the config parser so it accepts simple key=value lines, ignores blank/comment lines, and returns useful errors for malformed input."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_config_parse"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+use std::collections::BTreeMap;
+
+pub fn parse_config(input: &str) -> Result<BTreeMap<String, String>, String> {
+    let mut out = BTreeMap::new();
+    for line in input.lines() {
+        let (key, value) = line
+            .split_once(':')
+            .ok_or_else(|| "missing separator".to_string())?;
+        out.insert(key.to_string(), value.to_string());
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_key_value_lines() {
+        let parsed = parse_config("host = localhost\\nport=8080\\n# comment\\n\\n").unwrap();
+        assert_eq!(parsed.get("host").map(String::as_str), Some("localhost"));
+        assert_eq!(parsed.get("port").map(String::as_str), Some("8080"));
+    }
+
+    #[test]
+    fn rejects_malformed_lines_with_line_number() {
+        let err = parse_config("host=localhost\\nbad line").unwrap_err();
+        assert!(err.contains("line 2"));
+    }
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]

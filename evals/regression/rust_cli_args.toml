@@ -1,0 +1,65 @@
+id = "rust_cli_args"
+title = "Parse CLI flags without swallowing values"
+tags = ["rust", "cli", "parsing"]
+prompt = "Fix the tiny CLI parser. It should parse --name <value>, support --verbose, and reject missing or unknown arguments."
+
+[[files]]
+path = "Cargo.toml"
+content = """
+[package]
+name = "eval_rust_cli_args"
+version = "0.1.0"
+edition = "2021"
+"""
+
+[[files]]
+path = "src/lib.rs"
+content = """
+#[derive(Debug, PartialEq, Eq)]
+pub struct Options {
+    pub name: String,
+    pub verbose: bool,
+}
+
+pub fn parse_args(args: &[&str]) -> Result<Options, String> {
+    let mut name = String::new();
+    let mut verbose = false;
+    for arg in args {
+        match *arg {
+            "--name" => name = "default".to_string(),
+            "--verbose" => verbose = true,
+            other => return Err(format!("unknown argument {other}")),
+        }
+    }
+    Ok(Options { name, verbose })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_name_and_verbose() {
+        assert_eq!(
+            parse_args(&["--name", "ada", "--verbose"]).unwrap(),
+            Options {
+                name: "ada".to_string(),
+                verbose: true,
+            }
+        );
+    }
+
+    #[test]
+    fn rejects_missing_name_value() {
+        assert!(parse_args(&["--name"]).unwrap_err().contains("missing"));
+    }
+
+    #[test]
+    fn rejects_unknown_args() {
+        assert!(parse_args(&["--debug"]).unwrap_err().contains("unknown"));
+    }
+}
+"""
+
+[verify]
+command = ["cargo", "test", "--quiet"]
