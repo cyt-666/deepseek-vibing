@@ -61,7 +61,7 @@
 - 旧 P0 live smoke 中，模型曾尝试直接调用 `apply_patch` tool 并收到 `unsupported call: apply_patch`，随后通过 shell patch 完成任务。本批已通过 DeepSeek JSON function `apply_patch` 收口；最新 live smoke 未再出现该 warning。
 - 旧 P1 live smoke 中，模型曾尝试过 `read` 这个未注册工具名并收到 `unsupported call: read`。本批已通过 DeepSeek `read_file` function 和 hidden `read` alias 收口，并建立轻量测试基线；最新 live smoke 已通过，未再出现该 warning。
 - stable smoke 的输入 token 较高，虽然 prompt cache 命中正常，但 repo context prefix、base instructions 和默认上下文注入仍需要继续优化。
-- Vision Bridge 已完成单元测试和隐私测试，并新增 `scripts/deepseek-vision-live-smoke.sh` 作为真实 E2E 验收入口；当前本机配置尚未填写 `[auth].vision_api_key`、真实 `[vision].base_url` 和 `[vision].model`，因此脚本按预期退出 2，未发起视觉 provider 请求。
+- Vision Bridge 已完成单元测试、隐私测试和真实 E2E smoke；`scripts/deepseek-vision-live-smoke.sh` 使用真实视觉 provider 将红色 PNG 转成 observation，DeepSeek 正确回答 dominant color 为 red，trajectory 检查未发现 raw image/base64/raw reasoning marker。
 - FIM CLI/core 已完成单元测试和 CLI 测试，但尚未使用真实 DeepSeek `/beta/completions` 做端到端 live smoke。
 
 ## 3. 总体原则
@@ -287,7 +287,7 @@
 - 增加更完整的缓存清理和缓存目录配置。
 - 支持不同 detail/task hint 的策略建议。
 - 验证截图、UI 错误图、仓库图片、data URL 四类输入。
-- 使用真实视觉 provider 跑一次端到端 live smoke，确认 `[auth].vision_api_key` 优先级、缓存、失败 observation 和 DeepSeek request 隐私边界。（脚本已完成；等待真实 vision provider 配置后运行）
+- 使用真实视觉 provider 跑一次端到端 live smoke，确认 `[auth].vision_api_key` 优先级、缓存、失败 observation 和 DeepSeek request 隐私边界。（已完成：`scripts/deepseek-vision-live-smoke.sh` 通过）
 - 评估是否需要多视觉模型路由。
 
 验收标准：
