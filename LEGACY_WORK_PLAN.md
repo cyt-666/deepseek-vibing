@@ -62,7 +62,7 @@
 - 旧 P1 live smoke 中，模型曾尝试过 `read` 这个未注册工具名并收到 `unsupported call: read`。本批已通过 DeepSeek `read_file` function 和 hidden `read` alias 收口，并建立轻量测试基线；最新 live smoke 已通过，未再出现该 warning。
 - stable smoke 的输入 token 较高，虽然 prompt cache 命中正常，但 repo context prefix、base instructions 和默认上下文注入仍需要继续优化。
 - Vision Bridge 已完成单元测试、隐私测试和真实 E2E smoke；`scripts/deepseek-vision-live-smoke.sh` 使用真实视觉 provider 将红色 PNG 转成 observation，DeepSeek 正确回答 dominant color 为 red，trajectory 检查未发现 raw image/base64/raw reasoning marker。
-- FIM CLI/core 已完成单元测试和 CLI 测试，但尚未使用真实 DeepSeek `/beta/completions` 做端到端 live smoke。
+- FIM CLI/core 已完成单元测试、CLI 测试和真实 DeepSeek `/beta/completions` live smoke；`scripts/deepseek-fim-live-smoke.sh` 返回 `deepseek-v4-pro` 补全文本 `    +`，usage/cache 字段正常，未发现 API key 泄露。
 
 ## 3. 总体原则
 
@@ -302,7 +302,7 @@
 
 工作内容：
 
-- 使用真实 DeepSeek `/beta/completions` 跑一次 `deepseek-vibing fim` live smoke，确认 `[auth].deepseek_api_key`、usage/cache 字段和错误脱敏路径。
+- 使用真实 DeepSeek `/beta/completions` 跑一次 `deepseek-vibing fim` live smoke，确认 `[auth].deepseek_api_key`、usage/cache 字段和错误脱敏路径。（已完成：`scripts/deepseek-fim-live-smoke.sh` 通过）
 - 设计 FIM LSP 或轻量补全服务边界。
 - 定义 prefix/suffix 截断策略和 token budget。
 - 增加缓存、去重和 debounce 策略。

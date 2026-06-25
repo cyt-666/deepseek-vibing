@@ -69,6 +69,12 @@ Run the Vision Bridge live smoke after configuring `[auth].vision_api_key`,
 scripts/deepseek-vision-live-smoke.sh
 ```
 
+Run the DeepSeek FIM live smoke against `/beta/completions`:
+
+```shell
+scripts/deepseek-fim-live-smoke.sh
+```
+
 See [PROJECT_PLAN.md](./PROJECT_PLAN.md) for the staged migration plan.
 
 ## License
