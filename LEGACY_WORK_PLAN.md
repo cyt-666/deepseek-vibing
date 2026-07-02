@@ -1,6 +1,6 @@
 # DeepSeek Vibing 遗留工作计划书
 
-最后更新：2026-06-12
+最后更新：2026-07-02
 
 ## 1. 文档目标
 
@@ -63,6 +63,7 @@
 - stable smoke 的输入 token 较高问题已完成本批收口：DeepSeek repo context prefix 默认预算从 `160KB / 80 files` 降到 `48KB / 40 files`，source/lock anchor 改为项目地图式摘要，DeepSeek 静态 base instructions 改为短版专用提示；复验两次 stable input tokens 分别为 `31477` 和 `39845`，均明显低于优化前 `74739`，non-cached input 从优化前 `8947` 降到 `8437` / `8101`。
 - Vision Bridge 已完成单元测试、隐私测试和真实 E2E smoke；`scripts/deepseek-vision-live-smoke.sh` 使用真实视觉 provider 将红色 PNG 转成 observation，DeepSeek 正确回答 dominant color 为 red，trajectory 检查未发现 raw image/base64/raw reasoning marker。
 - FIM CLI/core 已完成单元测试、CLI 测试和真实 DeepSeek `/beta/completions` live smoke；`scripts/deepseek-fim-live-smoke.sh` 返回 `deepseek-v4-pro` 补全文本 `    +`，usage/cache 字段正常，未发现 API key 泄露。
+- 发布前前五项收口已完成：P2 归档已提交，安装脚本修复为 canonical package layout，V8/code-mode release 包装残留已删除，配置/安装/首次使用文档已补齐，app-server/backend 第一批 dead code 与旧公开文案已清理，`scripts/deepseek-release-smoke.sh` 已固化本地/可选 live/package smoke。
 
 ## 3. 总体原则
 
@@ -361,8 +362,8 @@
 3. 完成内部 rename、测试基线和品牌残留收口。（已完成）
 4. 收敛 DeepSeek `read` / `read_file` tool alias，减少 live tool loop 中的 unsupported call。（已完成，最新 live smoke 复验通过）
 5. 完成 P2 Eval、Vision Bridge 和 FIM server 发布前闭环。（已完成）
-6. 保留 app-server 作为长期本地协议层，持续清理云端/backend dead code。
-7. 准备发布包、安装脚本、配置文档和轻量 smoke 流程。
+6. 完成发布包、安装脚本、配置文档和轻量 smoke 流程第一批收口。（已完成）
+7. 保留 app-server 作为长期本地协议层，持续清理云端/backend dead code。
 
 这个顺序的原因是：真实 API 验证和用户表面收口最容易暴露 MVP 是否可用；auth/config 迁移影响持久化路径，必须早定；内部 rename 应放在主路径稳定之后，避免把功能问题和命名问题混在一起。
 
@@ -375,6 +376,8 @@
 ### 6.2 app-server 是否进入 MVP
 
 app-server 仍承担部分本地协议能力。account/auth protocol、remote plugin backend 和 realtime protocol 已完成硬删，但 app-server 仍有历史命名、部分 backend/no-op 兼容类型和较重的测试依赖。需要明确它是 DeepSeek Vibing 的长期本地协议层，还是只作为过渡兼容层。
+
+当前决策：发布前保留 app-server 作为本地 TUI/SDK/desktop/editor 协议层。本批只清理 dead code、旧公开文案和 release 阻塞；不删除整个 app-server，不改公共协议边界。
 
 ### 6.3 ChatGPT/Auth 类型清理
 
@@ -428,5 +431,6 @@ cargo tree --manifest-path deepseek-vibing/deepseek-vibing-rs/Cargo.toml -p deep
 - 不立即实现 container/microVM/fullVM sandbox runtime；该项已后延为 optional enterprise hardening。
 - 不立即把 FIM 接入主 agent loop。
 - 不立即硬编码 DeepSeek 价格。
+- 不立即发布 npm/Python/GitHub release；发布前准备已完成第一批，本地 release smoke 先作为门槛。
 
 这些事项应在 P0/P1 收口后再单独拆计划。

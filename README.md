@@ -15,7 +15,8 @@ This repository is now a DeepSeek-first local coding agent baseline. It keeps th
 
 ## Configuration
 
-Create `~/.deepseek-vibing/config.toml`:
+Create `~/.deepseek-vibing/config.toml`. See [docs/config.md](./docs/config.md)
+for the full recommended configuration.
 
 ```toml
 model_provider = "deepseek"
@@ -24,30 +25,6 @@ model = "deepseek-v4-flash"
 [auth]
 deepseek_api_key = "sk-..."
 vision_api_key = ""
-
-[vision]
-enabled = true
-provider = "openai_compatible"
-model = "<your-vision-model>"
-base_url = "https://your-vision-provider.example/v1"
-cache = true
-cache_max_entries = 500
-cache_max_bytes = 104857600
-# cache_dir = "/absolute/path/to/vision-cache"
-# cache_ttl_seconds = 604800
-
-[trajectory]
-enabled = "auto"
-detail = "summary"
-
-[eval.pricing]
-currency = "USD"
-
-[eval.pricing.models.deepseek-v4-flash]
-cache_hit_input_per_million_tokens = 0.0
-cache_miss_input_per_million_tokens = 0.0
-output_per_million_tokens = 0.0
-reasoning_output_per_million_tokens = 0.0
 ```
 
 On Unix-like systems, the config may contain API keys and should be private:
@@ -57,6 +34,13 @@ chmod 600 ~/.deepseek-vibing/config.toml
 ```
 
 ## Development
+
+Start with [docs/getting-started.md](./docs/getting-started.md), then use the
+install and configuration references:
+
+- [docs/install.md](./docs/install.md)
+- [docs/config.md](./docs/config.md)
+- [docs/authentication.md](./docs/authentication.md)
 
 Build and check the Rust CLI workspace:
 
@@ -68,6 +52,12 @@ Run the CLI help after building:
 
 ```shell
 cargo run --manifest-path deepseek-vibing-rs/Cargo.toml -p deepseek-vibing-cli --bin deepseek-vibing -- --help
+```
+
+Run the local release smoke checklist:
+
+```shell
+scripts/deepseek-release-smoke.sh
 ```
 
 Run the P0 live smoke against your real local config:

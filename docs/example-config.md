@@ -1,3 +1,4 @@
-# Sample configuration
+# Sample Configuration
 
-For a sample configuration file, see [this documentation](https://github.com/deepseek-vibing/deepseek-vibing/tree/main/docs/config-sample).
+Use [config.md](./config.md) for the current DeepSeek Vibing configuration
+reference and a complete example `~/.deepseek-vibing/config.toml`.

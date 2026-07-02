@@ -523,9 +523,9 @@ send_original_images_to_main_model = false
 
 优先级如下：
 
-1. 固化 P2 发布前闭环：保留 eval baseline/regression/pricing、Vision Bridge 缓存和真实 smoke、FIM CLI/server/smoke 的文档与验收命令。
-2. 准备发布包和安装脚本，确保 `~/.deepseek-vibing/config.toml`、`DEEPSEEK_VIBING_HOME`、`[auth]`、Vision、FIM、eval 的入门路径一致。
-3. 继续做轻量 app-server/backend dead code 清理，但不恢复 ChatGPT account、remote plugin backend、realtime 或 Codex Cloud 语义。
+1. 已固化 P2 发布前闭环：保留 eval baseline/regression/pricing、Vision Bridge 缓存和真实 smoke、FIM CLI/server/smoke 的文档与验收命令。
+2. 已完成发布包和安装脚本第一批收口：canonical package layout、standalone installer、配置/安装/首次使用文档和 `scripts/deepseek-release-smoke.sh` 已对齐。
+3. 后续继续做轻量 app-server/backend dead code 清理和发布流程完善，但不恢复 ChatGPT account、remote plugin backend、realtime 或 Codex Cloud 语义。
 
 ## 8. 风险与决策点
 

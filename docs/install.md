@@ -1,63 +1,117 @@
-## Installing & building
+# Installing And Building
 
-### System requirements
+## System Requirements
 
-| Requirement                 | Details                                                         |
-| --------------------------- | --------------------------------------------------------------- |
-| Operating systems           | macOS 12+, Ubuntu 20.04+/Debian 10+, or Windows 11 **via WSL2** |
-| Git (optional, recommended) | 2.23+ for built-in PR helpers                                   |
-| RAM                         | 4-GB minimum (8-GB recommended)                                 |
+| Requirement | Details |
+| --- | --- |
+| Operating systems | macOS 12+, Ubuntu 20.04+/Debian 10+, Windows 11 |
+| Git | 2.23+ recommended |
+| RAM | 4 GB minimum, 8 GB recommended |
+| Config | `~/.deepseek-vibing/config.toml` |
 
-### DotSlash
+## Standalone Installer
 
-The GitHub Release also contains a [DotSlash](https://dotslash-cli.com/) file for the DeepSeek Vibing CLI named `deepseek-vibing`. Using a DotSlash file makes it possible to make a lightweight commit to source control to ensure all contributors use the same version of an executable, regardless of what platform they use for development.
+Released builds are installed under the DeepSeek Vibing home and exposed through
+a visible `deepseek-vibing` command.
 
-### Build from source
+Unix-like systems:
 
-```bash
-# Clone the repository and navigate to the root of the Cargo workspace.
-git clone https://github.com/deepseek-vibing/deepseek-vibing.git
-cd deepseek-vibing/deepseek-vibing-rs
-
-# Install the Rust toolchain, if necessary.
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-source "$HOME/.cargo/env"
-rustup component add rustfmt
-rustup component add clippy
-# Install helper tools used by the workspace justfile:
-cargo install --locked just
-# Install nextest for the `just test` helper.
-cargo install --locked cargo-nextest
-
-# Build DeepSeek Vibing.
-cargo build
-
-# Launch the TUI with a sample prompt.
-cargo run --bin deepseek-vibing -- "explain this codebase to me"
-
-# After making changes, use the root justfile helpers (they default to deepseek-vibing-rs):
-just fmt
-just fix -p <crate-you-touched>
-
-# Run the relevant tests (project-specific is fastest), for example:
-just test -p deepseek-vibing-tui
-# `just test` runs the test suite via nextest:
-just test
-# Avoid `--all-features` for routine local runs because it increases build
-# time and `target/` disk usage by compiling additional feature combinations.
+```shell
+curl -fsSL https://raw.githubusercontent.com/deepseek-vibing/deepseek-vibing/main/scripts/install/install.sh | sh
 ```
 
-## Tracing / verbose logging
+Windows PowerShell:
 
-DeepSeek Vibing is written in Rust, so it honors the `RUST_LOG` environment variable to configure its logging behavior.
+```powershell
+iwr https://raw.githubusercontent.com/deepseek-vibing/deepseek-vibing/main/scripts/install/install.ps1 -UseB | iex
+```
 
-The TUI records diagnostics in bounded local stores by default. Set `log_dir` explicitly to enable a plaintext TUI log for a run:
+Useful environment variables:
 
-```bash
+```shell
+DEEPSEEK_VIBING_HOME="$HOME/.deepseek-vibing"
+DEEPSEEK_VIBING_INSTALL_DIR="$HOME/.local/bin"
+DEEPSEEK_VIBING_RELEASE="latest"
+DEEPSEEK_VIBING_NON_INTERACTIVE="true"
+```
+
+The installer expects package archives with this layout:
+
+```text
+.
+├── deepseek-vibing-package.json
+├── bin
+│   └── deepseek-vibing[.exe]
+├── deepseek-vibing-path
+│   └── rg[.exe]
+└── deepseek-vibing-resources
+    ├── bwrap                         # Linux only
+    └── deepseek-vibing-*.exe         # Windows helper binaries
+```
+
+## Build From Source
+
+```shell
+git clone https://github.com/deepseek-vibing/deepseek-vibing.git
+cd deepseek-vibing
+
+cargo check --manifest-path deepseek-vibing-rs/Cargo.toml -p deepseek-vibing-cli
+cargo run --manifest-path deepseek-vibing-rs/Cargo.toml -p deepseek-vibing-cli --bin deepseek-vibing -- --help
+```
+
+For a debug binary:
+
+```shell
+cargo build --manifest-path deepseek-vibing-rs/Cargo.toml -p deepseek-vibing-cli --bin deepseek-vibing
+./deepseek-vibing-rs/target/debug/deepseek-vibing --version
+```
+
+For a release binary:
+
+```shell
+cargo build --manifest-path deepseek-vibing-rs/Cargo.toml -p deepseek-vibing-cli --bin deepseek-vibing --release
+```
+
+## Package Builder
+
+The package builder stages the canonical release layout and can write archives:
+
+```shell
+python3 scripts/build_deepseek_vibing_package.py \
+  --package-dir /tmp/deepseek-vibing-package \
+  --entrypoint-bin ./deepseek-vibing-rs/target/debug/deepseek-vibing \
+  --rg-bin "$(command -v rg)" \
+  --skip-zsh \
+  --force
+```
+
+Release jobs should use `--cargo-profile release` or pass signed/notarized
+prebuilt binaries through `--entrypoint-bin` and the resource-specific flags.
+
+## Release Smoke
+
+Use the local release checklist before publishing:
+
+```shell
+scripts/deepseek-release-smoke.sh
+```
+
+Optional checks:
+
+```shell
+scripts/deepseek-release-smoke.sh --package
+scripts/deepseek-release-smoke.sh --live
+```
+
+`--live` can make real DeepSeek and Vision provider API calls. Missing live
+configuration is reported as skipped, not as a local build failure.
+
+## Logging
+
+DeepSeek Vibing honors `RUST_LOG`. The TUI records diagnostics in bounded local
+stores by default. Set `log_dir` explicitly to enable a plaintext TUI log:
+
+```shell
 deepseek-vibing -c log_dir=./.deepseek-vibing-log
 tail -F ./.deepseek-vibing-log/deepseek-vibing-tui.log
 ```
-
-The non-interactive mode (`deepseek-vibing exec`) defaults to `RUST_LOG=error`, but messages are printed inline, so there is no need to monitor a separate file.
-
-See the Rust documentation on [`RUST_LOG`](https://docs.rs/env_logger/latest/env_logger/#enabling-logging) for more information on the configuration options.
