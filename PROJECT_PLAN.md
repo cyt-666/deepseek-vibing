@@ -519,13 +519,13 @@ send_original_images_to_main_model = false
 
 ## 7. 近期工作顺序
 
-截至 2026-06-06，阶段 0-11 的主实现路径已经进入可验收状态，阶段 12 正在做保守瘦身和 DeepSeek Vibing 身份整理。
+截至 2026-07-02，阶段 0-12、P0、P1 和 P2 第一批产品化收口已经完成。P3 container/microVM/fullVM sandbox runtime 暂时取消并后延为 optional enterprise hardening，不进入当前发布前必做路径。
 
 优先级如下：
 
-1. 完成阶段 12 验收：跑 `cargo check`、DeepSeek/Vision/FIM/trajectory/eval 回归测试、CLI help surface 和 dependency tree 检查。
-2. 继续清理 README/help 文案中仍主推 OpenAI、ChatGPT、Codex Cloud、Realtime、hosted web/image 的内容。
-3. 下一批深层清理再处理 app-server/backend/account/auth/realtime 协议遗留和内部 `deepseek-vibing-*` crate rename。
+1. 固化 P2 发布前闭环：保留 eval baseline/regression/pricing、Vision Bridge 缓存和真实 smoke、FIM CLI/server/smoke 的文档与验收命令。
+2. 准备发布包和安装脚本，确保 `~/.deepseek-vibing/config.toml`、`DEEPSEEK_VIBING_HOME`、`[auth]`、Vision、FIM、eval 的入门路径一致。
+3. 继续做轻量 app-server/backend dead code 清理，但不恢复 ChatGPT account、remote plugin backend、realtime 或 Codex Cloud 语义。
 
 ## 8. 风险与决策点
 

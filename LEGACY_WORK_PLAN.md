@@ -277,7 +277,7 @@
 - `rg 'TestDeepSeekVibing \\{ codex|DeepSeekVibingSpawnOk \\{ codex' deepseek-vibing/deepseek-vibing-rs` 无命中。
 - 默认 TUI/help/exec 启动路径不再出现 `Codex App`、`Run codex` 或 `Error finding codex home`。
 
-### P2：Vision Bridge 产品化
+### P2：Vision Bridge 产品化（已完成）
 
 目标是把阶段 8 的 Vision Bridge 从可用能力推进到稳定产品能力。
 
@@ -288,7 +288,7 @@
 - 支持不同 detail/task hint 的策略建议。（已完成第一批：README 说明 Vision Bridge 对截图、UI 错误图、仓库图片、data URL 的 observation-first 用法）
 - 验证截图、UI 错误图、仓库图片、data URL 四类输入。（已完成第一批：补充 cache/data URL/privacy 相关测试，真实 E2E smoke 已覆盖图片 observation 主路径）
 - 使用真实视觉 provider 跑一次端到端 live smoke，确认 `[auth].vision_api_key` 优先级、缓存、失败 observation 和 DeepSeek request 隐私边界。（已完成：`scripts/deepseek-vision-live-smoke.sh` 通过）
-- 评估是否需要多视觉模型路由。（后续保留）
+- 评估是否需要多视觉模型路由。（后续保留，不属于当前发布闭环）
 
 验收标准：
 
@@ -296,7 +296,7 @@
 - 视觉错误 observation 结构稳定。
 - DeepSeek request body 不包含原图、base64 或 raw image URL。
 
-### P2：FIM 与 IDE 集成预留
+### P2：FIM 与 IDE 集成预留（已完成）
 
 目标是把阶段 9 的 FIM CLI/core API 向 IDE 或编辑器集成推进。
 
@@ -306,7 +306,7 @@
 - 设计 FIM LSP 或轻量补全服务边界。（已完成第一批：`deepseek-vibing fim-server` 本地 HTTP JSON 服务）
 - 定义 prefix/suffix 截断策略和 token budget。（已完成第一批：`max_prefix_bytes` / `max_suffix_bytes`，UTF-8 边界安全截断）
 - 增加缓存、去重和 debounce 策略。（已完成第一批：server 进程内 completion cache、同 key 并发合并、`debounce_ms`）
-- 评估是否需要 streaming FIM。（后续保留）
+- 评估是否需要 streaming FIM。（后续保留，不属于当前发布闭环）
 - 保持 FIM 与主 agent loop 解耦。
 
 验收标准：
@@ -315,7 +315,7 @@
 - IDE 预留接口不改变主 agent turn 行为。（已完成：`fim-server` 独立于主 agent loop）
 - FIM 输出不自动 apply，仍由调用方决定如何使用。
 
-### P2：Eval 与质量门槛增强
+### P2：Eval 与质量门槛增强（已完成）
 
 目标是让 eval 从 smoke MVP 变成持续回归工具。
 
@@ -326,7 +326,7 @@
 - 增加可选 live task 集合。（已完成第一批：regression 数据集可用 `eval run --dataset evals/regression --mode live` 显式运行）
 - 引入用户配置价格表，计算成本估算。（已完成：`[eval.pricing]` 可选配置，未配置时 `cost_estimate = null`）
 - 增加趋势对比和回归摘要。（已完成第一批：baseline comparison、metric deltas、task regressions/recoveries）
-- 后续可继续增加图片观察任务、更多语言/仓库形态任务和多次 report 趋势图。
+- 后续可继续增加图片观察任务、更多语言/仓库形态任务和多次 report 趋势图；这些属于后续增强，不阻塞当前 P2 闭环。
 
 验收标准：
 
@@ -334,11 +334,11 @@
 - 报告能区分 offline operational metrics 和 live task pass rate。
 - cost 默认仍可为空，不硬编码 DeepSeek 价格。（已完成）
 
-### P3：Sandbox Runtime 深化
+### P3：Sandbox Runtime 深化（取消/后延）
 
-目标是把阶段 10 的 sandbox tier 记录推进到实际隔离能力。
+目标原本是把阶段 10 的 sandbox tier 记录推进到 container、microVM 或 fullVM 等实际隔离能力。本项暂时取消并后延为 optional enterprise hardening：当前主流 Codex/OpenCode 本地路径以权限、审批和平台 sandbox 为主，DeepSeek Vibing 现有 function/platform sandbox、approval、trajectory 记录已经满足当前发布前基线。
 
-工作内容：
+后延内容：
 
 - 明确 function、container、microVM、fullVM、external 各 tier 的语义。
 - 评估本地 container runtime 方案。
@@ -346,11 +346,11 @@
 - 先实现 container tier，再考虑 microVM/fullVM。
 - 将 runtime 选择写入 trajectory 和 eval 报告。
 
-验收标准：
+重新启动本项前的前置条件：
 
-- 默认行为仍遵循现有审批和 sandbox 策略。
-- 新 runtime 只在用户显式启用时使用。
-- trajectory 能清晰记录实际 sandbox tier 和网络状态。
+- 明确有企业隔离、可复现 eval 环境或不可信仓库执行需求。
+- 明确选择 Docker、Podman、microVM 或其他 runtime，不默认引入镜像拉取和 toolchain 维护成本。
+- 默认行为仍遵循现有审批和 sandbox 策略，新 runtime 必须显式启用。
 
 ## 5. 推荐推进顺序
 
@@ -360,8 +360,9 @@
 2. 完成 app-server protocol account/auth、remote plugin backend、realtime protocol 硬删。（已完成）
 3. 完成内部 rename、测试基线和品牌残留收口。（已完成）
 4. 收敛 DeepSeek `read` / `read_file` tool alias，减少 live tool loop 中的 unsupported call。（已完成，最新 live smoke 复验通过）
-5. 保留 app-server 作为长期本地协议层，持续清理云端/backend dead code。
-6. 做 Vision Bridge、FIM、eval 和 sandbox 的产品化增强。
+5. 完成 P2 Eval、Vision Bridge 和 FIM server 发布前闭环。（已完成）
+6. 保留 app-server 作为长期本地协议层，持续清理云端/backend dead code。
+7. 准备发布包、安装脚本、配置文档和轻量 smoke 流程。
 
 这个顺序的原因是：真实 API 验证和用户表面收口最容易暴露 MVP 是否可用；auth/config 迁移影响持久化路径，必须早定；内部 rename 应放在主路径稳定之后，避免把功能问题和命名问题混在一起。
 
@@ -424,7 +425,7 @@ cargo tree --manifest-path deepseek-vibing/deepseek-vibing-rs/Cargo.toml -p deep
 
 - 不立即删除整个 app-server。
 - 不立即迁移所有历史 session 和 trajectory 文件格式。
-- 不立即实现 microVM/fullVM sandbox runtime。
+- 不立即实现 container/microVM/fullVM sandbox runtime；该项已后延为 optional enterprise hardening。
 - 不立即把 FIM 接入主 agent loop。
 - 不立即硬编码 DeepSeek 价格。
 
