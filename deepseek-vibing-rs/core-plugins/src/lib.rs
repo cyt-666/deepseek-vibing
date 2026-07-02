@@ -7,7 +7,6 @@ pub mod marketplace;
 pub mod marketplace_add;
 pub mod marketplace_remove;
 pub mod marketplace_upgrade;
-mod plugin_bundle_archive;
 pub mod store;
 #[cfg(test)]
 mod test_support;

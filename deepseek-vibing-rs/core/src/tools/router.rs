@@ -142,6 +142,7 @@ impl ToolRouter {
         }
     }
 
+    #[cfg(test)]
     #[instrument(level = "trace", skip_all, err)]
     pub async fn dispatch_tool_call(
         &self,

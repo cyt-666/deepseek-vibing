@@ -44,6 +44,7 @@ mod extension_resources {
 }
 
 mod guard_limits {
+    #[cfg(test)]
     pub(super) const DEEPSEEK_VIBING_LIMIT_ID: &str = "deepseek-vibing";
 }
 
