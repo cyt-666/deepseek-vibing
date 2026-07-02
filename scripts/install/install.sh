@@ -6,7 +6,7 @@ RELEASE="${DEEPSEEK_VIBING_RELEASE:-latest}"
 NON_INTERACTIVE="${DEEPSEEK_VIBING_NON_INTERACTIVE:-false}"
 
 BIN_DIR="${DEEPSEEK_VIBING_INSTALL_DIR:-$HOME/.local/bin}"
-BIN_PATH="$BIN_DIRdeepseek-vibing"
+BIN_PATH="$BIN_DIR/deepseek-vibing"
 DEEPSEEK_VIBING_HOME_DIR="${DEEPSEEK_VIBING_HOME:-$HOME/.deepseek-vibing}"
 STANDALONE_ROOT="$DEEPSEEK_VIBING_HOME_DIR/packages/standalone"
 RELEASES_DIR="$STANDALONE_ROOT/releases"
@@ -513,13 +513,13 @@ version_from_binary() {
 }
 
 current_installed_version() {
-  version="$(version_from_binary "$CURRENT_LINK/bindeepseek-vibing" || true)"
+  version="$(version_from_binary "$CURRENT_LINK/bin/deepseek-vibing" || true)"
   if [ -n "$version" ]; then
     printf '%s\n' "$version"
     return 0
   fi
 
-  version="$(version_from_binary "$CURRENT_LINKdeepseek-vibing" || true)"
+  version="$(version_from_binary "$CURRENT_LINK/deepseek-vibing" || true)"
   if [ -n "$version" ]; then
     printf '%s\n' "$version"
     return 0
@@ -528,11 +528,11 @@ current_installed_version() {
   return 0
 }
 
-resolve_existing_codex() {
+resolve_existing_deepseek_vibing() {
   command -v deepseek-vibing 2>/dev/null || true
 }
 
-classify_existing_codex() {
+classify_existing_deepseek_vibing() {
   existing_path="$1"
 
   if [ -z "$existing_path" ] || [ "$existing_path" = "$BIN_PATH" ]; then
@@ -628,8 +628,8 @@ maybe_launch_deepseek_vibing_now() {
 }
 
 detect_conflicting_install() {
-  existing_path="$(resolve_existing_codex)"
-  manager="$(classify_existing_codex "$existing_path" || true)"
+  existing_path="$(resolve_existing_deepseek_vibing)"
+  manager="$(classify_existing_deepseek_vibing "$existing_path" || true)"
 
   if [ -z "$manager" ]; then
     return
@@ -677,11 +677,10 @@ install_package_release() {
   rm -rf "$stage_release"
   mkdir -p "$stage_release"
   tar -xzf "$archive_path" -C "$stage_release"
-  chmod 0755 "$stage_release/bindeepseek-vibing" "$stage_release/deepseek-vibing-path/rg"
+  chmod 0755 "$stage_release/bin/deepseek-vibing" "$stage_release/deepseek-vibing-path/rg"
   if [ -f "$stage_release/deepseek-vibing-resources/bwrap" ]; then
     chmod 0755 "$stage_release/deepseek-vibing-resources/bwrap"
   fi
-  ln -sf "bindeepseek-vibing" "$stage_releasedeepseek-vibing"
 
   if [ -e "$release_dir" ] || [ -L "$release_dir" ]; then
     rm -rf "$release_dir"
@@ -699,12 +698,20 @@ install_legacy_platform_npm_release() {
 
   mkdir -p "$RELEASES_DIR"
   rm -rf "$stage_release" "$extract_dir"
-  mkdir -p "$stage_release/deepseek-vibing-resources" "$extract_dir"
+  mkdir -p "$stage_release/bin" "$stage_release/deepseek-vibing-path" "$stage_release/deepseek-vibing-resources" "$extract_dir"
   tar -xzf "$archive_path" -C "$extract_dir"
 
-  cp "$vendor_rootdeepseek-vibingdeepseek-vibing" "$stage_releasedeepseek-vibing"
-  cp "$vendor_root/path/rg" "$stage_release/deepseek-vibing-resources/rg"
-  chmod 0755 "$stage_releasedeepseek-vibing" "$stage_release/deepseek-vibing-resources/rg"
+  if [ -f "$vendor_root/bin/deepseek-vibing" ]; then
+    cp "$vendor_root/bin/deepseek-vibing" "$stage_release/bin/deepseek-vibing"
+  else
+    cp "$vendor_root/deepseek-vibing/deepseek-vibing" "$stage_release/bin/deepseek-vibing"
+  fi
+  if [ -f "$vendor_root/deepseek-vibing-path/rg" ]; then
+    cp "$vendor_root/deepseek-vibing-path/rg" "$stage_release/deepseek-vibing-path/rg"
+  else
+    cp "$vendor_root/path/rg" "$stage_release/deepseek-vibing-path/rg"
+  fi
+  chmod 0755 "$stage_release/bin/deepseek-vibing" "$stage_release/deepseek-vibing-path/rg"
   if [ -f "$vendor_root/deepseek-vibing-resources/bwrap" ]; then
     cp "$vendor_root/deepseek-vibing-resources/bwrap" "$stage_release/deepseek-vibing-resources/bwrap"
     chmod 0755 "$stage_release/deepseek-vibing-resources/bwrap"
@@ -729,14 +736,13 @@ release_dir_is_complete() {
   case "$layout" in
     package)
       [ -f "$release_dir/deepseek-vibing-package.json" ] &&
-        [ -x "$release_dir/bindeepseek-vibing" ] &&
-        [ -x "$release_dirdeepseek-vibing" ] &&
+        [ -x "$release_dir/bin/deepseek-vibing" ] &&
         [ -x "$release_dir/deepseek-vibing-path/rg" ] ||
         return 1
       ;;
     legacy-platform-npm)
-      [ -x "$release_dirdeepseek-vibing" ] &&
-        [ -x "$release_dir/deepseek-vibing-resources/rg" ] ||
+      [ -x "$release_dir/bin/deepseek-vibing" ] &&
+        [ -x "$release_dir/deepseek-vibing-path/rg" ] ||
         return 1
       ;;
     *)
@@ -760,8 +766,8 @@ update_current_link() {
 release_deepseek_vibing_relative_path() {
   release_dir="$1"
 
-  if [ -x "$release_dir/bindeepseek-vibing" ]; then
-    printf 'bindeepseek-vibing\n'
+  if [ -x "$release_dir/bin/deepseek-vibing" ]; then
+    printf 'bin/deepseek-vibing\n'
   else
     printf 'deepseek-vibing\n'
   fi

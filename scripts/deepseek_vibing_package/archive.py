@@ -1,5 +1,7 @@
 """Archive writers for canonical DeepSeekVibing package directories."""
 
+from __future__ import annotations
+
 import shutil
 import subprocess
 import tarfile

@@ -560,10 +560,10 @@ function Test-LegacyPlatformNpmContentsAreComplete {
     }
 
     $expectedFiles = @(
-        "deepseek-vibing.exe",
+        "bin\deepseek-vibing.exe",
         "deepseek-vibing-resources\deepseek-vibing-command-runner.exe",
         "deepseek-vibing-resources\deepseek-vibing-windows-sandbox-setup.exe",
-        "deepseek-vibing-resources\rg.exe"
+        "deepseek-vibing-path\rg.exe"
     )
     foreach ($name in $expectedFiles) {
         if (-not (Test-Path -LiteralPath (Join-Path $PackageDir $name) -PathType Leaf)) {
@@ -690,10 +690,10 @@ function Test-VisibleDeepSeekVibingCommand {
         [string]$VisibleBinDir
     )
 
-    $codexCommand = Join-Path $VisibleBinDir "deepseek-vibing.exe"
-    & $codexCommand --version *> $null
+    $deepseekVibingCommand = Join-Path $VisibleBinDir "deepseek-vibing.exe"
+    & $deepseekVibingCommand --version *> $null
     if ($LASTEXITCODE -ne 0) {
-        throw "Installed DeepSeekVibing command failed verification: $codexCommand --version"
+        throw "Installed DeepSeekVibing command failed verification: $deepseekVibingCommand --version"
     }
 }
 
@@ -728,17 +728,17 @@ switch ($architecture) {
     }
 }
 
-$codexHome = if ([string]::IsNullOrWhiteSpace($env:DEEPSEEK_VIBING_HOME)) {
+$deepseekVibingHome = if ([string]::IsNullOrWhiteSpace($env:DEEPSEEK_VIBING_HOME)) {
     Join-Path $env:USERPROFILE ".deepseek-vibing"
 } else {
     $env:DEEPSEEK_VIBING_HOME
 }
-$standaloneRoot = Join-Path $codexHome "packages\standalone"
+$standaloneRoot = Join-Path $deepseekVibingHome "packages\standalone"
 $releasesDir = Join-Path $standaloneRoot "releases"
 $currentDir = Join-Path $standaloneRoot "current"
 $lockPath = Join-Path $standaloneRoot "install.lock"
 
-$defaultVisibleBinDir = Join-Path $env:LOCALAPPDATA "Programs\OpenAI\DeepSeekVibing\bin"
+$defaultVisibleBinDir = Join-Path $env:LOCALAPPDATA "Programs\DeepSeekVibing\bin"
 if ([string]::IsNullOrWhiteSpace($env:DEEPSEEK_VIBING_INSTALL_DIR)) {
     $visibleBinDir = $defaultVisibleBinDir
 } else {
@@ -821,13 +821,17 @@ try {
                 tar -xzf $archivePath -C $extractDir
 
                 $vendorRoot = Join-Path $extractDir "package/vendor/$target"
+                $binDir = Join-Path $stagingDir "bin"
+                $pathDir = Join-Path $stagingDir "deepseek-vibing-path"
                 $resourcesDir = Join-Path $stagingDir "deepseek-vibing-resources"
+                New-Item -ItemType Directory -Force -Path $binDir | Out-Null
+                New-Item -ItemType Directory -Force -Path $pathDir | Out-Null
                 New-Item -ItemType Directory -Force -Path $resourcesDir | Out-Null
                 $copyMap = @{
-                    "codexdeepseek-vibing.exe" = "deepseek-vibing.exe"
-                    "deepseek-vibing/deepseek-vibing-command-runner.exe" = "deepseek-vibing-resources\deepseek-vibing-command-runner.exe"
-                    "deepseek-vibing/deepseek-vibing-windows-sandbox-setup.exe" = "deepseek-vibing-resources\deepseek-vibing-windows-sandbox-setup.exe"
-                    "path/rg.exe" = "deepseek-vibing-resources\rg.exe"
+                    "bin/deepseek-vibing.exe" = "bin\deepseek-vibing.exe"
+                    "deepseek-vibing-resources/deepseek-vibing-command-runner.exe" = "deepseek-vibing-resources\deepseek-vibing-command-runner.exe"
+                    "deepseek-vibing-resources/deepseek-vibing-windows-sandbox-setup.exe" = "deepseek-vibing-resources\deepseek-vibing-windows-sandbox-setup.exe"
+                    "deepseek-vibing-path/rg.exe" = "deepseek-vibing-path\rg.exe"
                 }
 
                 foreach ($relativeSource in $copyMap.Keys) {
@@ -849,11 +853,7 @@ try {
         Ensure-Junction -LinkPath $currentDir -TargetPath $releaseDir -InstallerOwnedTargetPrefix $releasesDir
 
         $visibleParent = Split-Path -Parent $visibleBinDir
-        $currentBinDir = if ($installLayout -eq "Package") {
-            Join-Path $currentDir "bin"
-        } else {
-            $currentDir
-        }
+        $currentBinDir = Join-Path $currentDir "bin"
         New-Item -ItemType Directory -Force -Path $visibleParent | Out-Null
         $oldStandaloneBackup = Move-OldStandaloneBinIfApproved -VisibleBinDir $visibleBinDir -DefaultVisibleBinDir $defaultVisibleBinDir
         try {
@@ -917,8 +917,8 @@ Write-Step "Current PowerShell session: deepseek-vibing"
 Write-Step "Future PowerShell windows: open a new PowerShell window and run: deepseek-vibing"
 Write-Host "DeepSeekVibing CLI $resolvedVersion installed successfully."
 
-$codexCommand = Join-Path $visibleBinDir "deepseek-vibing.exe"
+$deepseekVibingCommand = Join-Path $visibleBinDir "deepseek-vibing.exe"
 if (Prompt-YesNo "Start DeepSeekVibing now?") {
     Write-Step "Launching DeepSeekVibing"
-    & $codexCommand
+    & $deepseekVibingCommand
 }

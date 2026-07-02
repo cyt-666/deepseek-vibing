@@ -28,13 +28,13 @@ if [[ $windows_cross_compile -eq 1 ]]; then
     ./.github/scripts/run-bazel-query-ci.sh \
       --windows-cross-compile \
       --output=label \
-      -- 'kind("rust_test rule", attr(tags, "manual", //deepseek-vibing-rs/... except //deepseek-vibing-rs/v8-poc/...))'
+      -- 'kind("rust_test rule", attr(tags, "manual", //deepseek-vibing-rs/...))'
   )"
 else
   manual_rust_test_targets="$(
     ./.github/scripts/run-bazel-query-ci.sh \
       --output=label \
-      -- 'kind("rust_test rule", attr(tags, "manual", //deepseek-vibing-rs/... except //deepseek-vibing-rs/v8-poc/...))'
+      -- 'kind("rust_test rule", attr(tags, "manual", //deepseek-vibing-rs/...))'
   )"
 fi
 if [[ "${RUNNER_OS:-}" != "Windows" ]]; then
@@ -52,8 +52,7 @@ elif [[ $windows_cross_compile -eq 1 ]]; then
 fi
 
 printf '%s\n' \
-  "//deepseek-vibing-rs/..." \
-  "-//deepseek-vibing-rs/v8-poc:all"
+  "//deepseek-vibing-rs/..."
 
 # `--config=clippy` on the `workspace_root_test` wrappers does not lint the
 # underlying `rust_test` binaries. Add the internal manual `*-unit-tests-bin`

@@ -8,9 +8,5 @@ cd "${repo_root}"
 # Keep this list focused on first-party Rust targets whose compile surface can
 # differ when `cfg(not(debug_assertions))` becomes active.
 #
-# Exclude the experimental `v8-poc` target because it pulls in expensive V8
-# build machinery that is unrelated to the release-only Rust regression this
-# workflow is meant to catch.
 printf '%s\n' \
-  "//deepseek-vibing-rs/..." \
-  "-//deepseek-vibing-rs/v8-poc:all"
+  "//deepseek-vibing-rs/..."

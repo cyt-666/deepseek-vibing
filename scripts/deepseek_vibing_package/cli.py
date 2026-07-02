@@ -1,5 +1,7 @@
 """Command-line interface for building DeepSeekVibing package directories."""
 
+from __future__ import annotations
+
 import argparse
 import tempfile
 from pathlib import Path
@@ -116,6 +118,19 @@ def parse_args() -> argparse.Namespace:
             "scripts/deepseek_vibing_package/rg."
         ),
     )
+    parser.add_argument(
+        "--zsh-bin",
+        type=Path,
+        help=(
+            "Optional local zsh executable override instead of fetching from "
+            "scripts/deepseek_vibing_package/deepseek-vibing-zsh."
+        ),
+    )
+    parser.add_argument(
+        "--skip-zsh",
+        action="store_true",
+        help="Do not include the optional patched zsh resource in the package.",
+    )
     return parser.parse_args()
 
 
@@ -157,10 +172,22 @@ def main() -> int:
         ),
     )
     version = read_workspace_version()
+    if args.skip_zsh and args.zsh_bin is not None:
+        raise RuntimeError("--skip-zsh cannot be combined with --zsh-bin.")
+    zsh_bin = None
+    if not args.skip_zsh:
+        zsh_bin = (
+            resolve_optional_input_path(
+                args.zsh_bin,
+                "prebuilt zsh executable",
+                "--zsh-bin",
+            )
+            or resolve_zsh_bin(spec)
+        )
     inputs = PackageInputs(
         entrypoint_bin=source_outputs.entrypoint_bin,
         rg_bin=resolve_rg_bin(spec, args.rg_bin),
-        zsh_bin=resolve_zsh_bin(spec),
+        zsh_bin=zsh_bin,
         bwrap_bin=source_outputs.bwrap_bin,
         deepseek_vibing_command_runner_bin=source_outputs.deepseek_vibing_command_runner_bin,
         deepseek_vibing_windows_sandbox_setup_bin=source_outputs.deepseek_vibing_windows_sandbox_setup_bin,

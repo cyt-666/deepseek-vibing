@@ -56,12 +56,9 @@ corresponding resource flags: `--bwrap-bin` for Linux packages, and
 Windows packages. This keeps package archive creation as a pure staging step
 after signing instead of rebuilding resources.
 
-When the builder source-builds an entrypoint for a Darwin or Linux target, it
-downloads and verifies the matching DeepSeekVibing-built V8 release pair before invoking
-Cargo and sets `RUSTY_V8_ARCHIVE` plus `RUSTY_V8_SRC_BINDING_PATH` for that
-build. Windows targets keep Cargo's release-build MSVC artifact path. Explicit
-overrides remain authoritative when both variables are already set. Set
-`V8_FROM_SOURCE=1` to leave the build with the `v8` crate source-build path.
+When the builder source-builds an entrypoint, it invokes Cargo directly for the
+selected target and profile. DeepSeek Vibing no longer ships the JavaScript
+code-mode path, so package builds do not download or configure those artifacts.
 
 `rg` is not built from this repository, so the builder fetches it from the
 DotSlash manifest at `scripts/deepseek_vibing_package/rg`. Downloaded archives are cached
@@ -73,4 +70,6 @@ The patched zsh fork used by `shell_zsh_fork` is fetched from the DotSlash
 manifest at `scripts/deepseek_vibing_package/deepseek-vibing-zsh` when the selected target has a
 matching prebuilt artifact. Downloaded archives are cached under
 `$TMPDIR/deepseek-vibing-package/<target>-zsh` and installed at
-`deepseek-vibing-resources/zsh/bin/zsh`.
+`deepseek-vibing-resources/zsh/bin/zsh`. Local smoke tests that must stay fully
+offline can pass `--skip-zsh`, while release jobs that already staged zsh can
+pass `--zsh-bin`.
